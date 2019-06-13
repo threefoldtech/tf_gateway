@@ -6,7 +6,7 @@ apt-get install git gcc wget -y
 
 # make output directory
 ARCHIVE=/tmp/archives
-TCPROUTER_FLIST=/tmp/tfchain
+TCPROUTER_FLIST=/tmp/tcprouter_dir
 
 
 mkdir -p $ARCHIVE
@@ -30,6 +30,19 @@ popd
 
 # make sure binary is executable
 chmod +x $TCPROUTER_FLIST/bin/*
+
+
+
+pushd /tmp
+wget https://gist.githubusercontent.com/xmonader/5d1fc6134f1f65acd0d10f71453adb27/raw/2190cef40e75dda44112ac9d31840c958980cd16/copy-chroot.sh
+chmod +x copy-chroot.sh
+
+apt install -y redis-server redis-tools
+
+./copy-chroot.sh  `which redis-server` $TCPROUTER_FLIST
+./copy-chroot.sh  `which redis-cli` $TCPROUTER_FLIST
+
+popd
 
 
 

@@ -51,5 +51,17 @@ cat << EOF > $COREDNS_REDIS_FLIST/Corefile
 }
 EOF
 
+pushd /tmp
+wget https://gist.githubusercontent.com/xmonader/5d1fc6134f1f65acd0d10f71453adb27/raw/2190cef40e75dda44112ac9d31840c958980cd16/copy-chroot.sh
+chmod +x copy-chroot.sh
+
+apt install -y redis-server redis-tools
+
+./copy-chroot.sh  `which redis-server` $COREDNS_REDIS_FLIST
+./copy-chroot.sh  `which redis-cli` $COREDNS_REDIS_FLIST
+
+popd
+
+
 
 tar -czf "/tmp/archives/redis_coredns.tar.gz" -C $COREDNS_REDIS_FLIST .
