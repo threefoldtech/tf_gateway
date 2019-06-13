@@ -33,4 +33,17 @@ chmod +x $TCPROUTER_FLIST/bin/*
 
 
 
+cat << EOF > $TCPROUTER_FLIST/router.toml
+[server]
+addr = "0.0.0.0"
+port = 443
+
+[server.dbbackend]
+type 	 = "redis"
+addr     = "127.0.0.1"
+port     = 6379
+refresh  = 10
+EOF
+
+
 tar -czf "/tmp/archives/tcprouter.tar.gz" -C $TCPROUTER_FLIST .
