@@ -41,7 +41,7 @@ cp /etc/ssl -R $COREDNS_REDIS_FLIST
 chmod +x $COREDNS_REDIS_FLIST/bin/*
 
 
-cat << EOF > $COREDNS_REDIS_FLIST/
+cat << EOF > $COREDNS_REDIS_FLIST/Corefile
 . {
     redis  {
         address 127.0.0.1:6379
