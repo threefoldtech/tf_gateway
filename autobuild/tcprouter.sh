@@ -59,4 +59,25 @@ refresh  = 10
 EOF
 
 
+cat << EOF > $TCPROUTER_FLIST/.startup.toml
+
+[startup.tcprouter]
+name = "core.system"
+after = "redis"
+protected = true
+
+[startup.tcprouter.args]
+name = "tcprouter"
+args = ["/router.toml"]
+
+[startup.redis]
+name = "core.system"
+protected = true
+
+[startup.redis.args]
+name = "redis-server"
+
+EOF
+
+
 tar -czf "/tmp/archives/tcprouter.tar.gz" -C $TCPROUTER_FLIST .

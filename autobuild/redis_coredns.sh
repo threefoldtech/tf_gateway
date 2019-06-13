@@ -51,6 +51,27 @@ cat << EOF > $COREDNS_REDIS_FLIST/Corefile
 }
 EOF
 
+cat << EOF > $COREDNS_REDIS_FLIST/.startup.toml
+
+[startup.coredns]
+name = "core.system"
+after = "redis"
+protected = true
+
+[startup.coredns.args]
+name = "coredns"
+args = ["-conf", "/Corefile"]
+
+[startup.redis]
+name = "core.system"
+protected = true
+
+[startup.redis.args]
+name = "redis-server"
+
+EOF
+
+
 pushd /tmp
 wget https://gist.githubusercontent.com/xmonader/5d1fc6134f1f65acd0d10f71453adb27/raw/2190cef40e75dda44112ac9d31840c958980cd16/copy-chroot.sh
 chmod +x copy-chroot.sh
