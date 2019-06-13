@@ -264,7 +264,7 @@ Here's an example of dns records for `example.net.`
 
 #### Example script to help with the creation of dns records on redis
 
-```
+```python
 from sys import argv
 import base64
 import json
