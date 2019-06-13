@@ -1,0 +1,7 @@
+[startup.coredns]
+name = "core.system"
+protected = true
+
+[startup.coredns.args]
+name = "/bin/coredns"
+args = ["-conf", "/Corefile", "-dns.port", "{COREDNS_PORT}"]
