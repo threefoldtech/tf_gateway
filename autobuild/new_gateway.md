@@ -58,6 +58,8 @@
   - ssh to the coredns continer, and download script that will add keys to redis 
   
 `wget https://raw.githubusercontent.com/threefoldtech/tf_gateway/master/scripts/create_coredns_site.py`
+
+   - start coredns servie :-  ` root@coredns:~# coredns -conf /Corefile `
  
 ```
 root@coredns:/tmp# python3
@@ -74,6 +76,7 @@ Type "help", "copyright", "credits" or "license" for more information.
 
  - Adding info to TCPRouter Contianer
    - ssh to the TCPRouter continer, and download script that will add keys to redis
+ start TCPRouter  `root@tcprouter:~# tcprouter /router.toml  `
 ```
  wget https://raw.githubusercontent.com/threefoldtech/tf_gateway/master/scripts/create_service.py
 
