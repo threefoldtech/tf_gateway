@@ -1,43 +1,43 @@
-## How to test New WebGateway :-
+# Deploying tf_gateway
 
-### In this test we will use 3 flists (all flists are merged with ubuntu flist ):-
+## Flists used (all flists are merged with ubuntu flist )
 
-##### Coredns_flist =  <https://hub.grid.tf/thabet/corednredisubuntu.flist>
+- Coredns_flist =  <https://hub.grid.tf/thabet/corednredisubuntu.flist>
+- TCPRouter_flist = <https://hub.grid.tf/thabet/routerubuntu.flist>
+- Caddy_flist = <https://hub.grid.tf/nashaatp/generic_caddy.flist>
 
-##### TCPRouter_flist = <https://hub.grid.tf/thabet/routerubuntu.flist>
-
-##### Caddy_flist = <https://hub.grid.tf/nashaatp/generic_caddy.flist>
-
-### we can use the coredns we need to point nx record to it, here is how to do this :-
-
+## NS Records for the COREDNS
 - Create a A record point to the public ip of the coredns like (ovh2.grid.tf)
 ![](./imgs/newg_1.png)
 
 - Create NS record with new domain that will point to the domain (ovh2.grid.tf)
 ![](./imgs/newg_2.png)
 
-#### Now Creating the containers :-
+## Now Creating the containers
 
-- creating CoreDns container :
-  - we need coredns to have `udp|53` port open 
+### CoreDNS
+Creating CoreDns container (Make sure to have `udp|53` port open) 
 
-`zos container new  --ports='udp|53:53' --name=coredns_3bot_test --hostname=coredns --root=https://hub.grid.tf/thabet/corednredisubuntu.flis`
+`zos container new  --ports='udp|53:53' --name=coredns_3bot_test --hostname=coredns --root=https://hub.grid.tf/thabet/corednredisubuntu.flist`
 
- - Creating TCPRouter container
-  - `zos container new  --ports=80:80,443:443 --name=tcprouter_3bot_test --hostname=tcprouter --root=https://hub.grid.tf/thabet/routerubuntu.flist`
+### Creating TCPRouter container
+
+`zos container new  --ports=80:80,443:443 --name=tcprouter_3bot_test --hostname=tcprouter --root=https://hub.grid.tf/thabet/routerubuntu.flist`
  
- - Creating websites Container :-  (with portforward to 443 to the container)
-    - `zos container new  --ports=5071:443 --name=caddy1_3bot_test --hostname=caddy1 --root=https://hub.grid.tf/nashaatp/generic_caddy.flist --env='REPO_URL:https://github.com/threefoldtech/www_threefold.tech.git,REPO_BRANCH:production'`
 
-   - `zos container new  --ports=5073:443 --name=caddy2_3bot_test --hostname=caddy2 --root=https://hub.grid.tf/nashaatp/generic_caddy.flist --env='REPO_URL:https://github.com/Incubaid/www_incubaid,REPO_BRANCH:production'`
+### Creating websites Container (with portforward to 443 to the container)
+
+```
+zos container new  --ports=5071:443 --name=caddy1_3bot_test --hostname=caddy1 --root=https://hub.grid.tf/nashaatp/generic_caddy.flist --env='REPO_URL:https://github.com/threefoldtech/www_threefold.tech.git,REPO_BRANCH:production'`
+
+zos container new  --ports=5073:443 --name=caddy2_3bot_test --hostname=caddy2 --root=https://hub.grid.tf/nashaatp/generic_caddy.flist --env='REPO_URL:https://github.com/Incubaid/www_incubaid,REPO_BRANCH:production'
+```
    
-   ``` 
-   NOTE the webserver(caddy) has to creat it's own certificate 
-   Like in caddy we add in caddyfile option to create the cert 
-   ```
-   -  caddyfile example :- 
+>   NOTE the webserver(caddy) has to create it's own certificate via ACME client (same goes for all of the deployed applications)
 
-   ```
+
+Example Caddyfile
+```caddy
 
    https://site1.bot.testbots.grid.tf {
     bind 0.0.0.0
@@ -53,19 +53,16 @@
        }
    }
 
-- now adding info to new CoreDns Container :-
+
+### Adding DNS Records to CoreDNS
    
-  - ssh to the coredns continer, and download script that will add keys to redis 
+- ssh to the coredns continer, and download script that will add keys to redis 
   
 `wget https://raw.githubusercontent.com/threefoldtech/tf_gateway/master/scripts/create_coredns_site.py`
 
-   - start coredns servie :-  ` root@coredns:~# coredns -conf /Corefile `
+- start coredns servie :-  ` root@coredns:~# coredns -conf /Corefile `
  
-```
-root@coredns:/tmp# python3
-Python 3.6.5 (default, Apr  1 2018, 05:46:30) 
-[GCC 7.3.0] on linux
-Type "help", "copyright", "credits" or "license" for more information.
+```python3
 >>> 
 >>> import create_coredns_site as c
 >>> c.create_a_record("site1.bot", [{"ip":"188.165.218.205"}])
@@ -74,9 +71,10 @@ Type "help", "copyright", "credits" or "license" for more information.
 
 ```
 
- - Adding info to TCPRouter Contianer
-   - ssh to the TCPRouter continer, and download script that will add keys to redis
- start TCPRouter  `root@tcprouter:~# tcprouter /router.toml  `
+### Adding Services to TCPRouter
+
+ssh to the TCPRouter continer, and download script that will add keys to redis
+start TCPRouter  `root@tcprouter:~# tcprouter /router.toml  `
 ```
  wget https://raw.githubusercontent.com/threefoldtech/tf_gateway/master/scripts/create_service.py
 
