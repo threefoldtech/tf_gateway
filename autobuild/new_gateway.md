@@ -11,9 +11,10 @@
 ### we can use the coredns we need to point nx record to it, here is how to do this :-
 
 - Create a A record point to the public ip of the coredns like (ovh2.grid.tf)
+![](https://github.com/threefoldtech/tf_gateway/blob/master/newg_1.png)
 
 - Create NS record with new domain that will point to the domain (ovh2.grid.tf)
-
+![](https://github.com/threefoldtech/tf_gateway/blob/master/newg_2.png)
 
 #### Now Creating the containers :-
 
@@ -57,6 +58,8 @@
   - ssh to the coredns continer, and download script that will add keys to redis 
   
 `wget https://raw.githubusercontent.com/threefoldtech/tf_gateway/master/scripts/create_coredns_site.py`
+
+   - start coredns servie :-  ` root@coredns:~# coredns -conf /Corefile `
  
 ```
 root@coredns:/tmp# python3
@@ -73,6 +76,7 @@ Type "help", "copyright", "credits" or "license" for more information.
 
  - Adding info to TCPRouter Contianer
    - ssh to the TCPRouter continer, and download script that will add keys to redis
+ start TCPRouter  `root@tcprouter:~# tcprouter /router.toml  `
 ```
  wget https://raw.githubusercontent.com/threefoldtech/tf_gateway/master/scripts/create_service.py
 
