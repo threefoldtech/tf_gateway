@@ -52,15 +52,17 @@ Example Caddyfile
         path . 
        }
    }
-
+```
 
 ### Adding DNS Records to CoreDNS
    
-- ssh to the coredns continer, and download script that will add keys to redis 
+ssh to the coredns continer, and download script that will manage the records addition to coredns
   
 `wget https://raw.githubusercontent.com/threefoldtech/tf_gateway/master/scripts/create_coredns_site.py`
 
-- start coredns servie :-  ` root@coredns:~# coredns -conf /Corefile `
+#### start coredns servie
+if not using autostart flist 
+`root@coredns:~# coredns -conf /Corefile `
  
 ```python3
 >>> 
