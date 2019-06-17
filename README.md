@@ -349,3 +349,8 @@ to register new service  `python3 create_service.py site1 site1.bot.testbots.gri
 import create_coredns_site as c
 c.create_a_record("site2.bot", [{"ip":"188.165.218.205"}])
 ```
+
+
+
+## Deployment of tf_gateway
+Please follow the docs on [deployment](./docs/deployment.md)

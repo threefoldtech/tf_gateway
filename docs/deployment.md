@@ -11,10 +11,10 @@
 ### we can use the coredns we need to point nx record to it, here is how to do this :-
 
 - Create a A record point to the public ip of the coredns like (ovh2.grid.tf)
-![](https://github.com/threefoldtech/tf_gateway/blob/master/newg_1.png)
+![](./imgs/newg_1.png)
 
 - Create NS record with new domain that will point to the domain (ovh2.grid.tf)
-![](https://github.com/threefoldtech/tf_gateway/blob/master/newg_2.png)
+![](./imgs/newg_2.png)
 
 #### Now Creating the containers :-
 
