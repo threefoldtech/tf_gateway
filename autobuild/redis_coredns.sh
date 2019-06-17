@@ -55,7 +55,7 @@ cat << EOF > $COREDNS_REDIS_FLIST/.startup.toml
 
 [startup.coredns]
 name = "core.system"
-after = "redis"
+after = ["redis"]
 protected = true
 
 [startup.coredns.args]
