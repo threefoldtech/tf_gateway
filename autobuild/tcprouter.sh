@@ -63,7 +63,7 @@ cat << EOF > $TCPROUTER_FLIST/.startup.toml
 
 [startup.tcprouter]
 name = "core.system"
-after = "redis"
+after = ["redis"]
 protected = true
 
 [startup.tcprouter.args]
