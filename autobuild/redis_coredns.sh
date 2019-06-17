@@ -71,9 +71,9 @@ name = "redis-server"
 
 EOF
 
-mkdir -p $TCPROUTER_FLIST/etc/redis
+mkdir -p $COREDNS_REDIS_FLIST/etc/redis
 
-cat << EOF > $TCPROUTER_FLIST/etc/redis/redis.conf
+cat << EOF > $COREDNS_REDIS_FLIST/etc/redis/redis.conf
 
 bind 0.0.0.0
 protected-mode yes
