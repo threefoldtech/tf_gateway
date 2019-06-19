@@ -28,8 +28,6 @@ pushd $TCPROUTER
 go build -ldflags "-linkmode external -s -w -extldflags -static" -o $GATEWAY_FLIST/bin/tcprouter
 popd
 
-# make sure binary is executable
-chmod +x $GATEWAY_FLIST/bin/*
 
 git clone https://github.com/coredns/coredns /tmp/coredns
 
@@ -47,8 +45,6 @@ popd
 cp /etc/ssl -R $GATEWAY_FLIST
 
 
-# make sure binary is executable
-chmod +x $GATEWAY_FLIST/bin/*
 
 
 cat << EOF > $GATEWAY_FLIST/Corefile
@@ -76,15 +72,16 @@ EOF
 
 cat << EOF > $GATEWAY_FLIST/bin/redis.sh
 #!/bin/sh
-if [ -n "$MASTER_REDIS_IP" ]
+if [ -n "\$MASTER_REDIS_IP" ]
 then
-echo "slaveof $MASTER_REDIS_IP 6379" >>  $GATEWAY_FLIST/etc/redis/redis.conf
+echo "slaveof \$MASTER_REDIS_IP 6379" >>  /etc/redis/redis.conf
 fi
 
 exec redis-server
 EOF
 
-chmod +x $GATEWAY_FLIST/bin/redis.sh
+
+chmod +x $GATEWAY_FLIST/bin/*
 
 
 cat << EOF > $GATEWAY_FLIST/.startup.toml
