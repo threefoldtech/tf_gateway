@@ -30,14 +30,6 @@ popd
 
 # make sure binary is executable
 chmod +x $GATEWAY_FLIST/bin/*
-# install go
-GOFILE=go1.12.linux-amd64.tar.gz
-wget https://dl.google.com/go/$GOFILE
-tar -C /usr/local -xzf $GOFILE
-mkdir -p /root/go
-export GOPATH=/root/go
-export PATH=$PATH:/usr/local/go/bin:$GOPATH/go/bin
-
 
 git clone https://github.com/coredns/coredns /tmp/coredns
 
@@ -84,13 +76,15 @@ EOF
 
 cat << EOF > $GATEWAY_FLIST/bin/redis.sh
 #!/bin/sh
-if $MASTER_REDIS_IP
+if [ -n "$MASTER_REDIS_IP" ]
 then
 echo "slaveof $MASTER_REDIS_IP 6379" >>  $GATEWAY_FLIST/etc/redis/redis.conf
 fi
+
+exec redis-server
 EOF
 
-
+chmod +x $GATEWAY_FLIST/bin/redis.sh
 
 
 cat << EOF > $GATEWAY_FLIST/.startup.toml
@@ -100,7 +94,7 @@ name = "core.system"
 protected = true
 
 [startup.redis.args]
-name = "./bin/redis.sh"
+name = "/bin/redis.sh"
 
 [startup.coredns]
 name = "core.system"
