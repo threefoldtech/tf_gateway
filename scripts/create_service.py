@@ -15,12 +15,13 @@ def create_service(name, sni, addr):
     r.set(service['Key'], json.dumps(service))
     
 
-if len(argv) > 3:
-    create_service(argv[1], argv[2], argv[3])
-else:
-    print("usage: create_service.py SERVICE_NAME SNI ADDR")
+if __name__ == "__main__":
+    if len(argv) > 3:
+        create_service(argv[1], argv[2], argv[3])
+    else:
+        print("usage: create_service.py SERVICE_NAME SNI ADDR")
 
-# create_service('facebook', "www.facebook.com", "102.132.97.35:443")
-# create_service('google', 'www.google.com', '172.217.19.46:443')
-# create_service('bing', 'www.bing.com', '13.107.21.200:443')
-            
+    # create_service('facebook', "www.facebook.com", "102.132.97.35:443")
+    # create_service('google', 'www.google.com', '172.217.19.46:443')
+    # create_service('bing', 'www.bing.com', '13.107.21.200:443')
+                
