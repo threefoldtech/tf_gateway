@@ -1,0 +1,6 @@
+redis
+nose
+nose-testconfig
+0-core-client
+requests
+loguru
