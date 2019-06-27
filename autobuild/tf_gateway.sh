@@ -74,7 +74,7 @@ cat << EOF > $GATEWAY_FLIST/bin/redis.sh
 #!/bin/sh
 if [ -n "\$MASTER_REDIS_IP" ]
 then
-echo "slaveof \$MASTER_REDIS_IP 6379" >>  /etc/redis/redis.conf
+echo "slaveof \$MASTER_REDIS_IP 4000" >>  /etc/redis/redis.conf
 fi
 
 exec redis-server
