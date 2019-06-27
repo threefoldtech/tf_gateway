@@ -6,12 +6,12 @@ from Jumpscale import j
 
 class Do_tf:
     def __init__(self):
-        token = os.environ.get("TOKEN")
-        self.do_client = j.clients.digitalocean.get("DO_CL", token_=token)
+        DO_token = os.environ.get("TOKEN")
+        self.do_client = j.clients.digitalocean.get("DO_CL", token_=DO_token)
 
     def create_vm(self, name):
-        create = self.do_client.droplet_create(name="", sshkey="Peter", image="zero_os", size_slug="s-1vcpu-1gb")
-        ip = create[1].addr
+        created = self.do_client.droplet_create(name="", sshkey="Peter", image="zero_os", size_slug="s-1vcpu-1gb")
+        ip = created[1].addr
         return ip
 
     def create_container(self, name, ip, flist, nics, ports, env=None, host_network=True):
@@ -28,7 +28,20 @@ class Do_tf:
             ip=ip,
             flist="https://hub.grid.tf/tf-autobuilder/threefoldtech-tf_gateway-tf-gateway-master.flist",
             nics=[{"type": "default", "name": "defaultnic", "id": " None"}],
-            ports={"53|udp": 53, "443": 443, "4000": 6379},
+            ports={"53|udp": 80, "443": 443, "4000": 6379},
+        )
+        if container_id:
+            print("{} has been deployed.".format(name))
+        return ip
+
+    def deploy_jumpscale(self, name, env=None):
+        ip = self.create_vm(name=name)
+        container_id = self.create_container(
+            name=name,
+            ip=ip,
+            flist="https://hub.grid.tf/tf-autobuilder/threefoldtech-jumpscaleX-development.flist",
+            nics=[{"type": "default", "name": "defaultnic", "id": " None"}],
+            ports={"80": 80, "443": 443, "4000": 6379},
         )
         if container_id:
             print("{} has been deployed.".format(name))
@@ -48,11 +61,11 @@ class Do_tf:
 
 if __name__ == "__main__":
     do_tf = Do_tf()
-    master_ip = do_tf.deploy_tf_gateway(name="master")
+    master_ip = do_tf.deploy_jumpscale(name="JSX_master")
 
     futures = []
-    for i in range(1, 6):
-        name = "slave_{}".format(i)
+    for i in range(5):
+        name = "TF_Gateway_{}".format(i)
         f = gevent.spawn(do_tf.deploy_tf_gateway, name=name, env={"MASTER_REDIS_IP": master_ip})
         f.link_exception(do_tf.on_error)
         f.link_value(do_tf.on_value)
