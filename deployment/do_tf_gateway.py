@@ -6,12 +6,13 @@ from Jumpscale import j
 
 class Do_tf:
     def __init__(self):
-        DO_token = os.environ.get("TOKEN")
-        self.do_client = j.clients.digitalocean.get("DO_CL", token_=DO_token)
+        do_token = os.environ.get("TOKEN")
+        self.do_client = j.clients.digitalocean.get("DO_CL", token_=do_token)
 
     def create_vm(self, name):
         created = self.do_client.droplet_create(name="", sshkey="Peter", image="zero_os", size_slug="s-1vcpu-1gb")
-        ip = created[1].addr
+        if created and len(created) >= 2:
+            ip = created[1].addr
         return ip
 
     def create_container(self, name, ip, flist, nics, ports, env=None, host_network=True):
@@ -21,27 +22,15 @@ class Do_tf:
         ).get()
         return container_id
 
-    def deploy_tf_gateway(self, name, env=None):
+    def install_web_gw(self, name, flist, ports, env=None):
         ip = self.create_vm(name=name)
         container_id = self.create_container(
             name=name,
             ip=ip,
-            flist="https://hub.grid.tf/tf-autobuilder/threefoldtech-tf_gateway-tf-gateway-master.flist",
+            flist=flist,
             nics=[{"type": "default", "name": "defaultnic", "id": " None"}],
-            ports={"53|udp": 80, "443": 443, "4000": 6379},
-        )
-        if container_id:
-            print("{} has been deployed.".format(name))
-        return ip
-
-    def deploy_jumpscale(self, name, env=None):
-        ip = self.create_vm(name=name)
-        container_id = self.create_container(
-            name=name,
-            ip=ip,
-            flist="https://hub.grid.tf/tf-autobuilder/threefoldtech-jumpscaleX-development.flist",
-            nics=[{"type": "default", "name": "defaultnic", "id": " None"}],
-            ports={"80": 80, "443": 443, "4000": 6379},
+            ports=ports,
+            env=env
         )
         if container_id:
             print("{} has been deployed.".format(name))
@@ -60,13 +49,17 @@ class Do_tf:
 
 
 if __name__ == "__main__":
+
+    gw_flist = "https://hub.grid.tf/tf-autobuilder/threefoldtech-tf_gateway-tf-gateway-master.flist"
+    jsx_flist = "https://hub.grid.tf/tf-autobuilder/threefoldtech-jumpscaleX-development.flist"
     do_tf = Do_tf()
-    master_ip = do_tf.deploy_jumpscale(name="JSX_master")
+    master_ip = do_tf.install_web_gw(name="jsx_master", flist=jsx_flist, ports={"80": 80, "443": 443, "4000": 6379})
 
     futures = []
     for i in range(5):
-        name = "TF_Gateway_{}".format(i)
-        f = gevent.spawn(do_tf.deploy_tf_gateway, name=name, env={"MASTER_REDIS_IP": master_ip})
+        name = "tf_gateway_{}".format(i)
+        f = gevent.spawn(do_tf.install_web_gw(), name=name, flist=gw_flist,
+                         ports={"53|udp": 53, "443": 443, "4000": 6379}, env={"MASTER_REDIS_IP": master_ip})
         f.link_exception(do_tf.on_error)
         f.link_value(do_tf.on_value)
         futures.append(f)
