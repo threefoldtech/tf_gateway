@@ -18,6 +18,7 @@ require (
 	github.com/onsi/ginkgo v1.11.0 // indirect
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v0.1.1 // indirect
+	github.com/pkg/errors v0.9.1
 	github.com/polydawn/refmt v0.0.0-20190807091052-3d65705ee9f1
 	github.com/rs/zerolog v1.18.0
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect

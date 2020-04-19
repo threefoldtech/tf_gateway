@@ -9,6 +9,8 @@ import (
 	"path/filepath"
 
 	"github.com/threefoldtech/zos/pkg/crypto"
+	"github.com/threefoldtech/zos/pkg/provision/explorer"
+	"github.com/threefoldtech/zos/pkg/provision/primitives"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -32,16 +34,16 @@ func main() {
 	app.Initialize()
 
 	var (
-		explorer   string
-		redisAddr  string
-		seed       string
-		storageDir string
-		debug      bool
-		ver        bool
+		explorerAddr string
+		redisAddr    string
+		seed         string
+		storageDir   string
+		debug        bool
+		ver          bool
 	)
 
 	flag.StringVar(&seed, "seed", "identity.seed", "path to the file containing the identity seed")
-	flag.StringVar(&explorer, "explorer", "https://explorer.grid.tf/explorer", "URL to the explorer API used to poll reservations")
+	flag.StringVar(&explorerAddr, "explorer", "https://explorer.grid.tf/explorer", "URL to the explorer API used to poll reservations")
 	flag.StringVar(&redisAddr, "redis", "tcp://localhost:6379", "Addr of the redis configuration server")
 	flag.StringVar(&storageDir, "data-dir", "tfgateway_datadir", "directory used by tfgateway to store temporary data")
 	flag.BoolVar(&debug, "debug", false, "enable debug logging")
@@ -92,7 +94,7 @@ func main() {
 	}
 
 	wgID := gwIdentity{kp}
-	cl, err := client.NewClient(explorer, wgID)
+	cl, err := client.NewClient(explorerAddr, wgID)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to instantiate explorer client")
 	}
@@ -121,7 +123,7 @@ func main() {
 	}
 
 	// to store reservation locally on the gateway
-	localStore, err := provision.NewFSStore(filepath.Join(storageDir, "reservations"))
+	localStore, err := primitives.NewFSStore(filepath.Join(storageDir, "reservations"))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create local reservation store")
 	}
@@ -145,13 +147,14 @@ func main() {
 		NodeID: kp.Identity(),
 		Cache:  localStore,
 		Source: provision.CombinedSource(
-			provision.PollSource(provision.ReservationPollerFromWorkloads(cl.Workloads, tfgateway.WorkloadToProvisionType), kp),
+			provision.PollSource(explorer.ReservationPollerFromWorkloads(cl.Workloads, tfgateway.WorkloadToProvisionType, nil), kp),
 			provision.NewDecommissionSource(localStore),
 		),
-		Feedback:       provision.NewExplorerFeedback(cl, provision.ToSchemaType),
-		Signer:         wgID,
 		Provisioners:   provisioner.Provisioners,
 		Decomissioners: provisioner.Decommissioners,
+		Feedback:       explorer.NewExplorerFeedback(cl, primitives.ResultToSchemaType),
+		Signer:         wgID,
+		Statser:        &primitives.Counters{},
 	})
 
 	log.Info().Str("identity", kp.Identity()).Msg("starting gateway")

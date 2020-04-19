@@ -24,7 +24,7 @@ type Provisioner struct {
 	dns   *CoreDNS
 
 	Provisioners    map[provision.ReservationType]provision.ProvisionerFunc
-	Decommissioners map[provision.ReservationType]provision.DecommissionerFunc
+	Decommissioners map[provision.ReservationType]provision.DecomissionerFunc
 }
 
 func NewProvisioner(proxy *TCPRouter, dns *CoreDNS) *Provisioner {
@@ -38,7 +38,7 @@ func NewProvisioner(proxy *TCPRouter, dns *CoreDNS) *Provisioner {
 		SubDomainReservation:     p.subDomainProvision,
 		DomainDeleateReservation: p.domainDeleateProvision,
 	}
-	p.Decommissioners = map[provision.ReservationType]provision.DecommissionerFunc{
+	p.Decommissioners = map[provision.ReservationType]provision.DecomissionerFunc{
 		ProxyReservation:         p.proxyDecomission,
 		ReverseProxyReservation:  p.reverseProxyDecomission,
 		SubDomainReservation:     p.subDomainDecomission,
