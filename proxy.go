@@ -30,7 +30,7 @@ func (p *Provisioner) proxyProvisionImpl(ctx context.Context, r *provision.Reser
 	}
 	log.Info().Str("id", r.ID).Msgf("provision proxy %+v", data)
 
-	return result, p.proxy.AddProxy(r.User, data)
+	return result, p.proxy.AddProxy(r.User, data.Domain, data.Addr, int(data.Port), int(data.PortTLS))
 }
 
 func (p *Provisioner) proxyDecomission(ctx context.Context, r *provision.Reservation) error {
@@ -41,5 +41,5 @@ func (p *Provisioner) proxyDecomission(ctx context.Context, r *provision.Reserva
 		return err
 	}
 
-	return p.proxy.RemoveProxy(r.User, data)
+	return p.proxy.RemoveProxy(r.User, data.Domain)
 }

@@ -8,6 +8,8 @@ import (
 	"os"
 	"path/filepath"
 
+	"github.com/threefoldtech/tfgateway/dns"
+	"github.com/threefoldtech/tfgateway/proxy"
 	"github.com/threefoldtech/zos/pkg/crypto"
 	"github.com/threefoldtech/zos/pkg/provision/explorer"
 	"github.com/threefoldtech/zos/pkg/provision/primitives"
@@ -62,7 +64,7 @@ func main() {
 
 	flag.Parse()
 
-	pool, err := tfgateway.NewRedisPool(redisAddr)
+	pool, err := newRedisPool(redisAddr)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connec to redis configuration server")
 	}
@@ -131,12 +133,12 @@ func main() {
 	// create context and add middlewares
 	ctx := context.Background()
 
-	dns, err := tfgateway.NewCoreDNS(pool, "_dns")
+	dns, err := dns.New(pool, "_dns")
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create DNS manager")
 	}
 
-	proxy, err := tfgateway.NewTCPRouter(pool)
+	proxy, err := proxy.New(pool)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create TCP proxy manager")
 	}

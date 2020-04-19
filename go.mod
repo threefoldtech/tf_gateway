@@ -29,5 +29,4 @@ require (
 	github.com/warpfork/go-wish v0.0.0-20200122115046-b9ea61034e4a // indirect
 	go.etcd.io/bbolt v1.3.1-etcd.8 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
-	upspin.io v0.0.0-20200124224713-5ddde7b8e6ff // indirect
 )

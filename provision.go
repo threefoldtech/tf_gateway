@@ -8,6 +8,8 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfexplorer/models/generated/workloads"
+	"github.com/threefoldtech/tfgateway/dns"
+	"github.com/threefoldtech/tfgateway/proxy"
 	"github.com/threefoldtech/zos/pkg/provision"
 )
 
@@ -20,14 +22,14 @@ var (
 )
 
 type Provisioner struct {
-	proxy *TCPRouter
-	dns   *CoreDNS
+	proxy *proxy.ProxyMgr
+	dns   *dns.DNSMgr
 
 	Provisioners    map[provision.ReservationType]provision.ProvisionerFunc
 	Decommissioners map[provision.ReservationType]provision.DecomissionerFunc
 }
 
-func NewProvisioner(proxy *TCPRouter, dns *CoreDNS) *Provisioner {
+func NewProvisioner(proxy *proxy.ProxyMgr, dns *dns.DNSMgr) *Provisioner {
 	p := &Provisioner{
 		proxy: proxy,
 		dns:   dns,

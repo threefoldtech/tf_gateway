@@ -21,7 +21,7 @@ func (p *Provisioner) reverseProxyProvision(ctx context.Context, r *provision.Re
 	}
 	log.Info().Str("id", r.ID).Msgf("provision proxy %+v", data)
 
-	return nil, p.proxy.AddReverseProxy(r.User, data)
+	return nil, p.proxy.AddReverseProxy(r.User, data.Domain, data.Secret)
 }
 
 func (p *Provisioner) reverseProxyDecomission(ctx context.Context, r *provision.Reservation) error {
@@ -31,5 +31,5 @@ func (p *Provisioner) reverseProxyDecomission(ctx context.Context, r *provision.
 	}
 	log.Info().Str("id", r.ID).Msgf("decomission proxy %+v", data)
 
-	return p.proxy.RemoveReverseProxy(r.User, data)
+	return p.proxy.RemoveReverseProxy(r.User, data.Domain)
 }

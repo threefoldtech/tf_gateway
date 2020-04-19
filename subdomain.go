@@ -22,7 +22,7 @@ func (p *Provisioner) subDomainProvision(ctx context.Context, r *provision.Reser
 	}
 	log.Info().Str("id", r.ID).Msgf("provision Sudbomain %+v", data)
 
-	return nil, p.dns.AddSubdomain(r.User, data)
+	return nil, p.dns.AddSubdomain(r.User, data.Domain, data.IPs)
 }
 
 func (p *Provisioner) subDomainDecomission(ctx context.Context, r *provision.Reservation) error {
@@ -32,5 +32,5 @@ func (p *Provisioner) subDomainDecomission(ctx context.Context, r *provision.Res
 	}
 	log.Info().Str("id", r.ID).Msgf("provision Sudbomain %+v", data)
 
-	return p.dns.RemoveSubdomain(r.User, data)
+	return p.dns.RemoveSubdomain(r.User, data.Domain, data.IPs)
 }
