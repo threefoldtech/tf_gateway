@@ -1,4 +1,4 @@
-package tfgateway
+package main
 
 import (
 	"fmt"

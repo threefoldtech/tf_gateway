@@ -23,10 +23,8 @@ type ProxyMgr struct {
 	redis *redis.Pool
 }
 
-func New(pool *redis.Pool) (*ProxyMgr, error) {
-	return &ProxyMgr{
-		redis: pool,
-	}, nil
+func New(pool *redis.Pool) *ProxyMgr {
+	return &ProxyMgr{redis: pool}
 }
 
 func (r *ProxyMgr) key(domain string) string {

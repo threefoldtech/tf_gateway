@@ -5,14 +5,18 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"flag"
+	"fmt"
 	"os"
 	"path/filepath"
+
+	"github.com/cenkalti/backoff/v3"
 
 	"github.com/threefoldtech/tfgateway/dns"
 	"github.com/threefoldtech/tfgateway/proxy"
 	"github.com/threefoldtech/zos/pkg/crypto"
 	"github.com/threefoldtech/zos/pkg/provision/explorer"
 	"github.com/threefoldtech/zos/pkg/provision/primitives"
+	"github.com/threefoldtech/zos/pkg/provision/primitives/cache"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -75,19 +79,20 @@ func main() {
 
 	app.BootedPath = filepath.Join(storageDir, "booted")
 
-	var kp identity.KeyPair
-	kp, err = identity.LoadKeyPair(seed)
-	if err != nil && !os.IsNotExist(err) {
-		log.Fatal().Err(err).Msg("failed to read identity seed")
+	kp, err := ensureID(seed)
+	if err != nil {
+		log.Fatal().Err(err).Msg("")
 	}
-	if os.IsNotExist(err) {
-		if kp, err = identity.GenerateKeyPair(); err != nil {
-			log.Fatal().Err(err).Msgf("failed to generate new key pair from seed")
-		}
 
-		if err := kp.Save(seed); err != nil {
-			log.Fatal().Err(err).Msgf("failed to save new key pair into file %s", seed)
-		}
+	localStore, err := cache.NewFSStore(filepath.Join(storageDir, "reservations"))
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to create local reservation store")
+	}
+
+	wgID := gwIdentity{kp}
+	e, err := client.NewClient(explorerAddr, wgID)
+	if err != nil {
+		log.Fatal().Err(err).Msg("failed to instantiate explorer client")
 	}
 
 	loc, err := geoip.Fetch()
@@ -95,13 +100,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to fetch location")
 	}
 
-	wgID := gwIdentity{kp}
-	cl, err := client.NewClient(explorerAddr, wgID)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to instantiate explorer client")
-	}
-
-	if err := cl.Directory.GatewayRegister(directory.Gateway{
+	gw := directory.Gateway{
 		NodeId:       kp.Identity(),
 		PublicKeyHex: hex.EncodeToString(kp.PublicKey),
 		OsVersion:    version.Current().Short(),
@@ -120,46 +119,33 @@ func main() {
 		// ManagedDomains: ,
 		// TcpRouterPort: ,
 		// DnsNameserver: ,
-	}); err != nil {
+	}
+
+	bo := backoff.NewExponentialBackOff()
+	bo.MaxElapsedTime = 0
+	if err := backoff.Retry(registerID(gw, e), bo); err != nil {
 		log.Fatal().Err(err).Msg("failed to register gateway in the explorer")
 	}
 
-	// to store reservation locally on the gateway
-	localStore, err := primitives.NewFSStore(filepath.Join(storageDir, "reservations"))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create local reservation store")
-	}
-
-	// create context and add middlewares
-	ctx := context.Background()
-
-	dns, err := dns.New(pool, "_dns")
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create DNS manager")
-	}
-
-	proxy, err := proxy.New(pool)
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create TCP proxy manager")
-	}
-
-	provisioner := tfgateway.NewProvisioner(proxy, dns)
+	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dns.New(pool, "_dns"))
 
 	engine := provision.New(provision.EngineOps{
 		NodeID: kp.Identity(),
 		Cache:  localStore,
 		Source: provision.CombinedSource(
-			provision.PollSource(explorer.ReservationPollerFromWorkloads(cl.Workloads, tfgateway.WorkloadToProvisionType, nil), kp),
+			provision.PollSource(explorer.NewPoller(e, tfgateway.WorkloadToProvisionType, nil), kp),
 			provision.NewDecommissionSource(localStore),
 		),
 		Provisioners:   provisioner.Provisioners,
 		Decomissioners: provisioner.Decommissioners,
-		Feedback:       explorer.NewExplorerFeedback(cl, primitives.ResultToSchemaType),
+		Feedback:       explorer.NewFeedback(e, primitives.ResultToSchemaType),
 		Signer:         wgID,
 		Statser:        &primitives.Counters{},
 	})
 
 	log.Info().Str("identity", kp.Identity()).Msg("starting gateway")
+
+	ctx := context.Background()
 
 	ctx, _ = utils.WithSignal(ctx)
 	utils.OnDone(ctx, func(_ error) {
@@ -170,6 +156,31 @@ func main() {
 		log.Error().Err(err).Msg("unexpected error")
 	}
 	log.Info().Msg("provision engine stopped")
+}
+
+func registerID(gw directory.Gateway, expl *client.Client) func() error {
+	return func() error {
+		log.Info().Str("ID", gw.NodeId).Msg("trying to register to the explorer")
+		return expl.Directory.GatewayRegister(gw)
+	}
+}
+
+func ensureID(seed string) (kp identity.KeyPair, err error) {
+	kp, err = identity.LoadKeyPair(seed)
+	if err != nil && !os.IsNotExist(err) {
+		return kp, fmt.Errorf("failed to read identity seed: %w", err)
+	}
+	if os.IsNotExist(err) {
+		if kp, err = identity.GenerateKeyPair(); err != nil {
+			return kp, fmt.Errorf("failed to generate new key pair from seed: %w", err)
+		}
+
+		if err := kp.Save(seed); err != nil {
+			return kp, fmt.Errorf("failed to save new key pair into file %s: %w", seed, err)
+		}
+	}
+
+	return kp, nil
 }
 
 type gwIdentity struct {

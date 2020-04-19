@@ -14,11 +14,11 @@ type DNSMgr struct {
 	prefix string
 }
 
-func New(pool *redis.Pool, prefix string) (*DNSMgr, error) {
+func New(pool *redis.Pool, prefix string) *DNSMgr {
 	return &DNSMgr{
 		redis:  pool,
 		prefix: prefix,
-	}, nil
+	}
 }
 
 func (c *DNSMgr) zone(zone string) string {
