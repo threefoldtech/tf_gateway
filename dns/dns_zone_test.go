@@ -18,21 +18,21 @@ func TestZone(t *testing.T) {
 		TTL: 3600,
 	}
 
-	z.AddRecord("sub", a)
-	z.AddRecord("sub", aaa)
-	z.AddRecord("sub2", a)
+	z.Add("sub", a)
+	z.Add("sub", aaa)
+	z.Add("sub2", a)
 
 	assert.Equal(t, 2, len(z.Records["sub"]))
 	assert.Equal(t, 1, len(z.Records["sub2"]))
-	assert.Equal(t, []DNSRecord{a, aaa}, z.Records["sub"])
-	assert.Equal(t, []DNSRecord{a}, z.Records["sub2"])
+	assert.Equal(t, []Record{a, aaa}, z.Records["sub"])
+	assert.Equal(t, []Record{a}, z.Records["sub2"])
 
-	z.RemoveRecord("sub", aaa)
+	z.Remove("sub", aaa)
 	assert.Equal(t, 1, len(z.Records["sub"]))
-	assert.Equal(t, []DNSRecord{a}, z.Records["sub"])
+	assert.Equal(t, []Record{a}, z.Records["sub"])
 
 	// remove no existing also works
-	z.RemoveRecord("sub", aaa)
+	z.Remove("sub", aaa)
 	assert.Equal(t, 1, len(z.Records["sub"]))
-	assert.Equal(t, []DNSRecord{a}, z.Records["sub"])
+	assert.Equal(t, []Record{a}, z.Records["sub"])
 }

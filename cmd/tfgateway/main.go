@@ -32,10 +32,6 @@ import (
 	"github.com/threefoldtech/zos/pkg/version"
 )
 
-const (
-	module = "provision"
-)
-
 func main() {
 	app.Initialize()
 
@@ -138,7 +134,7 @@ func main() {
 		),
 		Provisioners:   provisioner.Provisioners,
 		Decomissioners: provisioner.Decommissioners,
-		Feedback:       explorer.NewFeedback(e, primitives.ResultToSchemaType),
+		Feedback:       explorer.NewFeedback(e, tfgateway.ResultToSchemaType),
 		Signer:         wgID,
 		Statser:        &primitives.Counters{},
 	})

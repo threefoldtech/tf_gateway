@@ -19,19 +19,21 @@ type service struct {
 	UserID string `json:"user"`
 }
 
-type ProxyMgr struct {
+// Mgr is configure a TCP router server using redis
+type Mgr struct {
 	redis *redis.Pool
 }
 
-func New(pool *redis.Pool) *ProxyMgr {
-	return &ProxyMgr{redis: pool}
+// New creates a new TCP router server manager
+func New(pool *redis.Pool) *Mgr {
+	return &Mgr{redis: pool}
 }
 
-func (r *ProxyMgr) key(domain string) string {
+func (r *Mgr) key(domain string) string {
 	return fmt.Sprintf("/tcprouter/services/%s", domain)
 }
 
-func (r *ProxyMgr) canUseDomain(user string, domain string) (bool, error) {
+func (r *Mgr) canUseDomain(user string, domain string) (bool, error) {
 	con := r.redis.Get()
 	defer con.Close()
 
@@ -51,7 +53,10 @@ func (r *ProxyMgr) canUseDomain(user string, domain string) (bool, error) {
 	return service.UserID == user, nil
 }
 
-func (r *ProxyMgr) AddProxy(user string, domain, addr string, port, portTLS int) error {
+// AddProxy adds a TCP proxy from domain to addr
+// port is for plain text protocol, usually HTTP
+// portTLS is for TCL protocol, usually HTTPS
+func (r *Mgr) AddProxy(user string, domain, addr string, port, portTLS int) error {
 
 	can, err := r.canUseDomain(user, domain)
 	if err != nil {
@@ -77,7 +82,9 @@ func (r *ProxyMgr) AddProxy(user string, domain, addr string, port, portTLS int)
 	_, err = con.Do("SET", r.key(domain), b)
 	return err
 }
-func (r *ProxyMgr) RemoveProxy(user string, domain string) error {
+
+// RemoveProxy removes a proxy added with AddProxy
+func (r *Mgr) RemoveProxy(user string, domain string) error {
 	can, err := r.canUseDomain(user, domain)
 	if err != nil {
 		return err
@@ -92,7 +99,8 @@ func (r *ProxyMgr) RemoveProxy(user string, domain string) error {
 	return err
 }
 
-func (r *ProxyMgr) AddReverseProxy(user string, domain, secret string) error {
+// AddReverseProxy add a reverse tunnel TCP proxy from domain to the TCP connection identityied by secret
+func (r *Mgr) AddReverseProxy(user string, domain, secret string) error {
 	can, err := r.canUseDomain(user, domain)
 	if err != nil {
 		return err
@@ -116,7 +124,8 @@ func (r *ProxyMgr) AddReverseProxy(user string, domain, secret string) error {
 	return err
 }
 
-func (r *ProxyMgr) RemoveReverseProxy(user string, domain string) error {
+// RemoveReverseProxy removes a reverse tunnel proxy added with AddReverseProxy
+func (r *Mgr) RemoveReverseProxy(user string, domain string) error {
 	can, err := r.canUseDomain(user, domain)
 	if err != nil {
 		return err

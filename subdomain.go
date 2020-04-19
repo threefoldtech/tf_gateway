@@ -10,6 +10,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Subdomain defines a sub-domain from a mangaged or delagated domain
 type Subdomain struct {
 	Domain string   `json:"domain"`
 	IPs    []net.IP `json:"destination"`

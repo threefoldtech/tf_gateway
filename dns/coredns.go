@@ -9,23 +9,27 @@ import (
 	"github.com/gomodule/redigo/redis"
 )
 
-type DNSMgr struct {
+// Mgr is responsible to configure CoreDNS trough its redis pluging
+type Mgr struct {
 	redis  *redis.Pool
 	prefix string
 }
 
-func New(pool *redis.Pool, prefix string) *DNSMgr {
-	return &DNSMgr{
+// New creates a DNS manager
+func New(pool *redis.Pool, prefix string) *Mgr {
+	return &Mgr{
 		redis:  pool,
 		prefix: prefix,
 	}
 }
 
-func (c *DNSMgr) zone(zone string) string {
+func (c *Mgr) zone(zone string) string {
 	return fmt.Sprintf("%s%s", c.prefix, zone)
 }
 
-func (c *DNSMgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
+// AddSubdomain configures a domain A or AAA records depending on the version of
+// the IP address in IPs
+func (c *Mgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
 
 	name, zone := splitDomain(domain)
 
@@ -47,7 +51,7 @@ func (c *DNSMgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
 	}
 
 	for _, ip := range IPs {
-		var r DNSRecord
+		var r Record
 		if ip.To16() == nil {
 			r = RecordA{
 				IP4: ip.String(),
@@ -59,7 +63,7 @@ func (c *DNSMgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
 				TTL: 3600,
 			}
 		}
-		z.AddRecord(name, r)
+		z.Add(name, r)
 	}
 
 	b, err := json.Marshal(z)
@@ -71,7 +75,8 @@ func (c *DNSMgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
 	return err
 }
 
-func (c *DNSMgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
+// RemoveSubdomain remove a domain added with AddSubdomain
+func (c *Mgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
 	name, zone := splitDomain(domain)
 
 	con := c.redis.Get()
@@ -92,7 +97,7 @@ func (c *DNSMgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error
 	}
 
 	for _, ip := range IPs {
-		var r DNSRecord
+		var r Record
 		if ip.To16() == nil {
 			r = RecordA{
 				IP4: ip.String(),
@@ -104,7 +109,7 @@ func (c *DNSMgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error
 				TTL: 3600,
 			}
 		}
-		z.RemoveRecord(name, r)
+		z.Remove(name, r)
 	}
 
 	b, err := json.Marshal(z)
@@ -116,7 +121,8 @@ func (c *DNSMgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error
 	return err
 }
 
-func (c *DNSMgr) AddDomainDelagate(user, domain string) error {
+// AddDomainDelagate configures coreDNS to manage domain
+func (c *Mgr) AddDomainDelagate(user, domain string) error {
 	con := c.redis.Get()
 	defer con.Close()
 
@@ -144,7 +150,8 @@ func (c *DNSMgr) AddDomainDelagate(user, domain string) error {
 	return err
 }
 
-func (c *DNSMgr) RemoveDomainDelagate(user string, domain string) error {
+// RemoveDomainDelagate remove a delagated domain added with AddDomainDelagate
+func (c *Mgr) RemoveDomainDelagate(user string, domain string) error {
 	con := c.redis.Get()
 	defer con.Close()
 

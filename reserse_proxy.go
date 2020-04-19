@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// ReverseProxy define a reverse tunnel TCP proxy
 type ReverseProxy struct {
 	Domain string `json:"domain"`
 	Secret string `json:"secret"`

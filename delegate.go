@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Delegate is the primitives that allow a user to delegate a or part of a domain to us
 type Delegate struct {
 	Domain string `json:"domain"`
 }

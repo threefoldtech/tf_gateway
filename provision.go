@@ -8,6 +8,7 @@ import (
 
 	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfexplorer/models/generated/workloads"
+	"github.com/threefoldtech/tfexplorer/schema"
 	"github.com/threefoldtech/tfgateway/dns"
 	"github.com/threefoldtech/tfgateway/proxy"
 	"github.com/threefoldtech/zos/pkg/provision"
@@ -21,15 +22,18 @@ var (
 	DomainDeleateReservation provision.ReservationType = "domain-delegate"
 )
 
+// Provisioner hold all the logic responsible to provision and decomission
+// the different primitives workloads defined by this package
 type Provisioner struct {
-	proxy *proxy.ProxyMgr
-	dns   *dns.DNSMgr
+	proxy *proxy.Mgr
+	dns   *dns.Mgr
 
 	Provisioners    map[provision.ReservationType]provision.ProvisionerFunc
 	Decommissioners map[provision.ReservationType]provision.DecomissionerFunc
 }
 
-func NewProvisioner(proxy *proxy.ProxyMgr, dns *dns.DNSMgr) *Provisioner {
+// NewProvisioner creates a new 0-OS provisioner
+func NewProvisioner(proxy *proxy.Mgr, dns *dns.Mgr) *Provisioner {
 	p := &Provisioner{
 		proxy: proxy,
 		dns:   dns,
@@ -65,7 +69,7 @@ func reserveproxyConverter(w workloads.GatewayReserveProxy) (ReverseProxy, strin
 	}, w.NodeId, nil
 }
 
-func SubdomainConverter(w workloads.GatewaySubdomain) (Subdomain, string, error) {
+func subdomainConverter(w workloads.GatewaySubdomain) (Subdomain, string, error) {
 	s := Subdomain{
 		Domain: w.Domain,
 		IPs:    make([]net.IP, len(w.IPs)),
@@ -83,6 +87,7 @@ func delegateConverter(w workloads.GatewayDelegate) (Delegate, string, error) {
 	}, w.NodeId, nil
 }
 
+// WorkloadToProvisionType TfgridReservationWorkload1 to provision.Reservation
 func WorkloadToProvisionType(w workloads.ReservationWorkload) (*provision.Reservation, error) {
 	log.Info().Msgf("tfgatway converter %+v", w)
 	reservation := &provision.Reservation{
@@ -113,7 +118,7 @@ func WorkloadToProvisionType(w workloads.ReservationWorkload) (*provision.Reserv
 			return nil, err
 		}
 	case workloads.GatewaySubdomain:
-		data, reservation.NodeID, err = SubdomainConverter(tmp)
+		data, reservation.NodeID, err = subdomainConverter(tmp)
 		if err != nil {
 			return nil, err
 		}
@@ -132,4 +137,34 @@ func WorkloadToProvisionType(w workloads.ReservationWorkload) (*provision.Reserv
 	}
 
 	return reservation, nil
+}
+
+// ResultToSchemaType converts result to schema type
+func ResultToSchemaType(r provision.Result) (*workloads.Result, error) {
+
+	var rType workloads.ResultCategoryEnum
+	switch r.Type {
+	case ProxyReservation:
+		rType = workloads.ResultCategoryProxy
+	case ReverseProxyReservation:
+		rType = workloads.ResultCategoryReverseProxy
+	case SubDomainReservation:
+		rType = workloads.ResultCategorySubDomain
+	case DomainDeleateReservation:
+		rType = workloads.ResultCategoryDomainDelegate
+	default:
+		return nil, fmt.Errorf("unknown reservation type: %s", r.Type)
+	}
+
+	result := workloads.Result{
+		Category:   rType,
+		WorkloadId: r.ID,
+		DataJson:   r.Data,
+		Signature:  r.Signature,
+		State:      workloads.ResultStateEnum(r.State),
+		Message:    r.Error,
+		Epoch:      schema.Date{Time: r.Created},
+	}
+
+	return &result, nil
 }

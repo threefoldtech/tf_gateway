@@ -22,16 +22,15 @@ var (
 	reservationSchemaLastVersion = reservationSchemaV1
 )
 
-// FSStore is a in reservation store
-// using the filesystem as backend
-type FSStore struct {
+// Fs is a in reservation cache using the filesystem as backend
+type Fs struct {
 	sync.RWMutex
 	root string
 }
 
-// NewFSStore creates a in memory reservation store
-func NewFSStore(root string) (*FSStore, error) {
-	store := &FSStore{
+// NewFSCache creates a in memory reservation store
+func NewFSCache(root string) (*Fs, error) {
+	store := &Fs{
 		root: root,
 	}
 
@@ -42,7 +41,8 @@ func NewFSStore(root string) (*FSStore, error) {
 	return store, nil
 }
 
-func (s *FSStore) Sync(statser provision.Statser) error {
+// Sync update the statser with all the reservation present in the cache
+func (s *Fs) Sync(statser provision.Statser) error {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -67,7 +67,7 @@ func (s *FSStore) Sync(statser provision.Statser) error {
 }
 
 // Add a reservation to the store
-func (s *FSStore) Add(r *provision.Reservation) error {
+func (s *Fs) Add(r *provision.Reservation) error {
 	s.Lock()
 	defer s.Unlock()
 
@@ -97,18 +97,13 @@ func (s *FSStore) Add(r *provision.Reservation) error {
 }
 
 // Remove a reservation from the store
-func (s *FSStore) Remove(id string) error {
+func (s *Fs) Remove(id string) error {
 	s.Lock()
 	defer s.Unlock()
 
-	_, err := s.get(id)
-	if os.IsNotExist(errors.Cause(err)) {
-		return nil
-	}
-
 	path := filepath.Join(s.root, id)
-	err = os.Remove(path)
-	if os.IsNotExist(err) {
+	err := os.Remove(path)
+	if os.IsNotExist(errors.Cause(err)) {
 		// shouldn't happen because we just did a get
 		return nil
 	} else if err != nil {
@@ -120,7 +115,7 @@ func (s *FSStore) Remove(id string) error {
 
 // GetExpired returns all id the the reservations that are expired
 // at the time of the function call
-func (s *FSStore) GetExpired() ([]*provision.Reservation, error) {
+func (s *Fs) GetExpired() ([]*provision.Reservation, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -159,25 +154,15 @@ func (s *FSStore) GetExpired() ([]*provision.Reservation, error) {
 
 // Get retrieves a specific reservation using its ID
 // if returns a non nil error if the reservation is not present in the store
-func (s *FSStore) Get(id string) (*provision.Reservation, error) {
+func (s *Fs) Get(id string) (*provision.Reservation, error) {
 	s.RLock()
 	defer s.RUnlock()
 
 	return s.get(id)
 }
 
-// getType retrieves a specific reservation's type using its ID
-// if returns a non nil error if the reservation is not present in the store
-func (s *FSStore) getType(id string) (provision.ReservationType, error) {
-	r, err := s.get(id)
-	if err != nil {
-		return provision.ReservationType(-1), err
-	}
-	return r.Type, nil
-}
-
 // Exists checks if the reservation ID is in the store
-func (s *FSStore) Exists(id string) (bool, error) {
+func (s *Fs) Exists(id string) (bool, error) {
 	s.RLock()
 	defer s.RUnlock()
 
@@ -192,7 +177,7 @@ func (s *FSStore) Exists(id string) (bool, error) {
 	return false, err
 }
 
-func (s *FSStore) get(id string) (*provision.Reservation, error) {
+func (s *Fs) get(id string) (*provision.Reservation, error) {
 	path := filepath.Join(s.root, id)
 	f, err := os.Open(path)
 	if os.IsNotExist(err) {
@@ -225,6 +210,6 @@ func (s *FSStore) get(id string) (*provision.Reservation, error) {
 }
 
 // Close makes sure the backend of the store is closed properly
-func (s *FSStore) Close() error {
+func (s *Fs) Close() error {
 	return nil
 }

@@ -36,6 +36,7 @@ type Counters struct {
 	NRU counterImpl // network units
 }
 
+// CurrentWorkloads return the number of each workloads provisioned on the system
 func (c *Counters) CurrentWorkloads() directory.WorkloadAmount {
 	return directory.WorkloadAmount{
 		Proxy:          uint16(c.proxy.Current()),
@@ -45,17 +46,19 @@ func (c *Counters) CurrentWorkloads() directory.WorkloadAmount {
 	}
 }
 
+// CurrentUnits return the number of each resource units reserved on the system
 func (c *Counters) CurrentUnits() directory.ResourceAmount {
 	return directory.ResourceAmount{
 		// NRU: c.NRU.Current(),
 	}
 }
 
-const (
-	mib = uint64(1024 * 1024)
-	gib = uint64(mib * 1024)
-)
+// const (
+// 	mib = uint64(1024 * 1024)
+// 	gib = uint64(mib * 1024)
+// )
 
+// Increment is called by the provision.Engine when a reservation has been provisionned
 func (c *Counters) Increment(r *provision.Reservation) error {
 
 	// var (
@@ -89,6 +92,7 @@ func (c *Counters) Increment(r *provision.Reservation) error {
 	return nil
 }
 
+// Decrement is called by the provision.Engine when a reservation has been decommissioned
 func (c *Counters) Decrement(r *provision.Reservation) error {
 
 	// var (

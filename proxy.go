@@ -9,6 +9,7 @@ import (
 	"github.com/rs/zerolog/log"
 )
 
+// Proxy defines the configuration for a TCP proxy
 type Proxy struct {
 	Domain  string `json:"domain"`
 	Addr    string `json:"addr"`
@@ -16,21 +17,15 @@ type Proxy struct {
 	PortTLS uint32 `json:"port_tls"`
 }
 
-type ProxyResult struct{}
-
 func (p *Provisioner) proxyProvision(ctx context.Context, r *provision.Reservation) (interface{}, error) {
-	return p.proxyProvisionImpl(ctx, r)
-}
-
-func (p *Provisioner) proxyProvisionImpl(ctx context.Context, r *provision.Reservation) (result ProxyResult, err error) {
 	log.Info().Str("id", r.ID).Msgf("provision proxy %+v", r)
 	data := Proxy{}
 	if err := json.Unmarshal(r.Data, &data); err != nil {
-		return result, err
+		return nil, err
 	}
 	log.Info().Str("id", r.ID).Msgf("provision proxy %+v", data)
 
-	return result, p.proxy.AddProxy(r.User, data.Domain, data.Addr, int(data.Port), int(data.PortTLS))
+	return nil, p.proxy.AddProxy(r.User, data.Domain, data.Addr, int(data.Port), int(data.PortTLS))
 }
 
 func (p *Provisioner) proxyDecomission(ctx context.Context, r *provision.Reservation) error {
