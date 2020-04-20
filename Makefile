@@ -1,8 +1,10 @@
-PWD := $(shell pwd)
+OUT = $(shell realpath -m bin)
 GOPATH := $(shell go env GOPATH)
-LDFLAGS := ""
-
-BUILD_LDFLAGS := '$(LDFLAGS)'
+branch = $(shell git symbolic-ref -q --short HEAD || git describe --tags --exact-match)
+revision = $(shell git rev-parse HEAD)
+dirty = $(shell test -n "`git diff --shortstat 2> /dev/null | tail -n1`" && echo "*")
+version = github.com/threefoldtech/zos/pkg/version
+ldflags = '-w -s -X $(version).Branch=$(branch) -X $(version).Revision=$(revision) -X $(version).Dirty=$(dirty)'
 
 all: build
 
@@ -13,7 +15,7 @@ getdeps:
 	@echo "Installing misspell" && go get -u github.com/client9/misspell/cmd/misspell
 	@echo "Installing ineffassign" && go get -u github.com/gordonklaus/ineffassign
 
-verifiers: vet fmt lint cyclo spelling static #deadcode
+verifiers: vet fmt lint cyclo spelling staticcheck deadcode
 
 vet:
 	@echo "Running $@"
@@ -42,29 +44,18 @@ deadcode:
 spelling:
 	@${GOPATH}/bin/misspell -i monitord -error `find .`
 
-static:
+staticcheck:
 	go run honnef.co/go/tools/cmd/staticcheck -- ./...
 
-# Builds minio, runs the verifiers then runs the tests.
-check: test
 test: verifiers build
 	# we already ran vet separately, so safe to turn it off here
-	@echo "Running unit tests with GOFLAGS=${GOFLAGS}"
-	for pkg in $(shell go list ./... | grep -Ev "stubs|network" ); do \
-		go test -v -vet=off $$pkg; \
-	done
+	@echo "Running unit tests with GOFLAGS=${GOFLAGS}"	
+	go test -v -vet=off ./...
 
 testrace: verifiers build
 	@echo "Running unit tests with GOFLAGS=${GOFLAGS}"
 	# we already ran vet separately, so safe to turn it off here
-	@CGO_ENABLED=1 go test -v -vet=off -race ./...
-
-coverage: verifiers build
-	@(env bash $(PWD)/buildscripts/go-coverage.sh)
-
-generate:
-	@echo "Generating modules client stubs"
-	go generate github.com/threefoldtech/zos/pkg
+	go test -v -vet=off -race ./...
 
 build:
-	@CGO_ENABLED=0 go build -v ./...
+	cd cmd/tfgateway && go build -ldflags $(ldflags) -o $(OUT)/tfgateway
