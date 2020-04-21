@@ -134,7 +134,7 @@ func main() {
 		),
 		Provisioners:   provisioner.Provisioners,
 		Decomissioners: provisioner.Decommissioners,
-		Feedback:       explorer.NewFeedback(e, tfgateway.ResultToSchemaType),
+		Feedback:       tfgateway.NewFeedback(e, tfgateway.ResultToSchemaType),
 		Signer:         wgID,
 		Statser:        staster,
 	})
