@@ -8,14 +8,15 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"time"
 
 	"github.com/cenkalti/backoff/v3"
 
+	"github.com/shirou/gopsutil/host"
 	"github.com/threefoldtech/tfgateway/dns"
 	"github.com/threefoldtech/tfgateway/proxy"
 	"github.com/threefoldtech/zos/pkg/crypto"
 	"github.com/threefoldtech/zos/pkg/provision/explorer"
-	"github.com/threefoldtech/zos/pkg/provision/primitives"
 	"github.com/threefoldtech/zos/pkg/provision/primitives/cache"
 
 	"github.com/rs/zerolog"
@@ -80,9 +81,13 @@ func main() {
 		log.Fatal().Err(err).Msg("")
 	}
 
+	staster := &tfgateway.Counters{}
 	localStore, err := cache.NewFSStore(filepath.Join(storageDir, "reservations"))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to create local reservation store")
+	}
+	if err := localStore.Sync(staster); err != nil {
+		log.Fatal().Err(err).Msg("failed to sync statser with reservation from cache")
 	}
 
 	wgID := gwIdentity{kp}
@@ -100,10 +105,6 @@ func main() {
 		NodeId:       kp.Identity(),
 		PublicKeyHex: hex.EncodeToString(kp.PublicKey),
 		OsVersion:    version.Current().Short(),
-		// Created: ,
-		// Updated: ,
-		// Uptime: ,
-		// Address: ,
 		Location: directory.Location{
 			Continent: loc.Continent,
 			Country:   loc.Country,
@@ -111,7 +112,6 @@ func main() {
 			Longitude: loc.Longitute,
 			Latitude:  loc.Latitude,
 		},
-		// Workloads: ,
 		// ManagedDomains: ,
 		// TcpRouterPort: ,
 		// DnsNameserver: ,
@@ -129,19 +129,24 @@ func main() {
 		NodeID: kp.Identity(),
 		Cache:  localStore,
 		Source: provision.CombinedSource(
-			provision.PollSource(explorer.NewPoller(e, tfgateway.WorkloadToProvisionType, nil), kp),
+			provision.PollSource(explorer.NewPoller(e, tfgateway.WorkloadToProvisionType, tfgateway.ProvisionOrder), kp),
 			provision.NewDecommissionSource(localStore),
 		),
 		Provisioners:   provisioner.Provisioners,
 		Decomissioners: provisioner.Decommissioners,
 		Feedback:       explorer.NewFeedback(e, tfgateway.ResultToSchemaType),
 		Signer:         wgID,
-		Statser:        &primitives.Counters{},
+		Statser:        staster,
 	})
 
 	log.Info().Str("identity", kp.Identity()).Msg("starting gateway")
 
 	ctx := context.Background()
+
+	(&uptimeTicker{
+		nodeID:   kp.Identity(),
+		explorer: e,
+	}).Start(ctx)
 
 	ctx, _ = utils.WithSignal(ctx)
 	utils.OnDone(ctx, func(_ error) {
@@ -193,4 +198,53 @@ func (n gwIdentity) Identity() string {
 
 func (n gwIdentity) Sign(b []byte) ([]byte, error) {
 	return crypto.Sign(n.kp.PrivateKey, b)
+}
+
+type uptimeTicker struct {
+	nodeID   string
+	explorer *client.Client
+}
+
+// Uptime returns the uptime of the node
+func (u *uptimeTicker) uptime() (uint64, error) {
+	info, err := host.Info()
+	if err != nil {
+		return 0, err
+	}
+	return info.Uptime, nil
+}
+
+func (u *uptimeTicker) Start(ctx context.Context) {
+	sendUptime := func() error {
+		uptime, err := u.uptime()
+		if err != nil {
+			log.Error().Err(err).Msgf("failed to read uptime")
+			return err
+		}
+
+		log.Info().Msg("send heart-beat to BCDB")
+		if err := u.explorer.Directory.GatewayUpdateUptime(u.nodeID, uptime); err != nil {
+			log.Error().Err(err).Msgf("failed to send heart-beat to BCDB")
+			return err
+		}
+		return nil
+	}
+
+	_ = backoff.Retry(sendUptime, backoff.NewExponentialBackOff())
+
+	tick := time.NewTicker(time.Minute * 10)
+
+	go func() {
+		defer tick.Stop()
+
+		for {
+			select {
+			case <-tick.C:
+				backoff.Retry(sendUptime, backoff.NewExponentialBackOff())
+			case <-ctx.Done():
+				return
+			}
+		}
+	}()
+
 }
