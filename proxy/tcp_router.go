@@ -1,6 +1,7 @@
 package proxy
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -12,7 +13,7 @@ import (
 // https://github.com/threefoldtech/tcprouter/blob/master/config.go#L36
 type service struct {
 	Addr         string `json:"addr"`
-	ClientSecret string `json:"clientsecret` // will forward connection to it directly instead of hitting the Addr.
+	ClientSecret string `json:"clientsecret"` // will forward connection to it directly instead of hitting the Addr.
 	TLSPort      int    `json:"tlsport"`
 	HTTPPort     int    `json:"httpport"`
 
@@ -46,7 +47,7 @@ func (r *Mgr) canUseDomain(user string, domain string) (bool, error) {
 	}
 
 	service := service{}
-	if err := json.Unmarshal(data, &service); err != nil {
+	if err := valkyrieDecode(data, &service); err != nil {
 		return false, err
 	}
 
@@ -66,7 +67,8 @@ func (r *Mgr) AddProxy(user string, domain, addr string, port, portTLS int) erro
 		return fmt.Errorf("cannot add proxy from %s: %w", domain, ErrAuth)
 	}
 
-	b, err := json.Marshal(service{
+	key := r.key(domain)
+	b, err := valkyrieEncode(key, service{
 		Addr:     addr,
 		HTTPPort: port,
 		TLSPort:  portTLS,
@@ -79,7 +81,7 @@ func (r *Mgr) AddProxy(user string, domain, addr string, port, portTLS int) erro
 	con := r.redis.Get()
 	defer con.Close()
 
-	_, err = con.Do("SET", r.key(domain), b)
+	_, err = con.Do("SET", key, b)
 	return err
 }
 
@@ -95,7 +97,7 @@ func (r *Mgr) RemoveProxy(user string, domain string) error {
 
 	con := r.redis.Get()
 	defer con.Close()
-	_, err = con.Do("DELETE", r.key(domain))
+	_, err = con.Do("DEL", r.key(domain))
 	return err
 }
 
@@ -109,7 +111,8 @@ func (r *Mgr) AddReverseProxy(user string, domain, secret string) error {
 		return fmt.Errorf("cannot add reverse proxy from %s: %w", domain, ErrAuth)
 	}
 
-	b, err := json.Marshal(service{
+	key := r.key(domain)
+	b, err := valkyrieEncode(key, service{
 		ClientSecret: secret,
 		UserID:       user,
 	})
@@ -120,7 +123,7 @@ func (r *Mgr) AddReverseProxy(user string, domain, secret string) error {
 	con := r.redis.Get()
 	defer con.Close()
 
-	_, err = con.Do("SET", r.key(domain), b)
+	_, err = con.Do("SET", key, b)
 	return err
 }
 
@@ -136,6 +139,37 @@ func (r *Mgr) RemoveReverseProxy(user string, domain string) error {
 
 	con := r.redis.Get()
 	defer con.Close()
-	_, err = con.Do("DELETE", r.key(domain))
+	_, err = con.Do("DEL", r.key(domain))
 	return err
+}
+
+type valkyrieObj struct {
+	Key   string
+	Value string
+}
+
+func valkyrieEncode(key string, v interface{}) ([]byte, error) {
+	b, err := json.Marshal(v)
+	if err != nil {
+		return nil, err
+	}
+
+	return json.Marshal(valkyrieObj{
+		Key:   key,
+		Value: base64.StdEncoding.EncodeToString(b),
+	})
+}
+
+func valkyrieDecode(b []byte, v interface{}) error {
+	obj := valkyrieObj{}
+	if err := json.Unmarshal(b, &obj); err != nil {
+		return err
+	}
+
+	value, err := base64.StdEncoding.DecodeString(obj.Value)
+	if err != nil {
+		return err
+	}
+
+	return json.Unmarshal(value, v)
 }

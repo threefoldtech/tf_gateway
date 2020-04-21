@@ -2,6 +2,7 @@ package dns
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"net"
 	"strings"
@@ -38,7 +39,10 @@ func (c *Mgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
 
 	data, err := redis.Bytes(con.Do("GET", c.zone(zone)))
 	if err != nil {
-		return err
+		if errors.Is(err, redis.ErrNil) {
+			return fmt.Errorf("the zone %s is not managed by the Gateway. Try delegating the domain before creation subdomain to it", zone)
+		}
+		return fmt.Errorf("failed to read the DNS zone %s: %w", zone, err)
 	}
 
 	z := Zone{}
@@ -72,7 +76,7 @@ func (c *Mgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
 	}
 
 	_, err = con.Do("HSET", c.zone(zone), name, b)
-	return err
+	return fmt.Errorf("failed to set zone into config store: %w", err)
 }
 
 // RemoveSubdomain remove a domain added with AddSubdomain

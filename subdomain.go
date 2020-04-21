@@ -6,7 +6,8 @@ import (
 
 	"github.com/threefoldtech/zos/pkg/provision"
 
-	"github.com/polydawn/refmt/json"
+	"encoding/json"
+
 	"github.com/rs/zerolog/log"
 )
 

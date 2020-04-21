@@ -1,39 +1,20 @@
 package tfgateway
 
 import (
-	"sync/atomic"
-
 	"github.com/threefoldtech/tfexplorer/models/generated/directory"
 	"github.com/threefoldtech/zos/pkg/provision"
+	"github.com/threefoldtech/zos/pkg/provision/primitives"
 )
-
-// counterImpl value for safe increment/decrement
-type counterImpl uint64
-
-// Increment counter atomically by one
-func (c *counterImpl) Increment(v uint64) uint64 {
-	return atomic.AddUint64((*uint64)(c), v)
-}
-
-// Decrement counter atomically by one
-func (c *counterImpl) Decrement(v uint64) uint64 {
-	return atomic.AddUint64((*uint64)(c), -v)
-}
-
-// Current returns the current value
-func (c *counterImpl) Current() uint64 {
-	return atomic.LoadUint64((*uint64)(c))
-}
 
 // Counters tracks the amount of primitives workload deployed and
 // the amount of resource unit used
 type Counters struct {
-	proxy          counterImpl
-	reverseProxy   counterImpl
-	subdomain      counterImpl
-	delegateDomain counterImpl
+	proxy          primitives.CounterUint64
+	reverseProxy   primitives.CounterUint64
+	subdomain      primitives.CounterUint64
+	delegateDomain primitives.CounterUint64
 
-	NRU counterImpl // network units
+	NRU primitives.CounterUint64 // network units
 }
 
 // CurrentWorkloads return the number of each workloads provisioned on the system
@@ -52,11 +33,6 @@ func (c *Counters) CurrentUnits() directory.ResourceAmount {
 		// NRU: c.NRU.Current(),
 	}
 }
-
-// const (
-// 	mib = uint64(1024 * 1024)
-// 	gib = uint64(mib * 1024)
-// )
 
 // Increment is called by the provision.Engine when a reservation has been provisionned
 func (c *Counters) Increment(r *provision.Reservation) error {

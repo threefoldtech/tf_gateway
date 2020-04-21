@@ -6,7 +6,6 @@ import (
 	"net"
 	"time"
 
-	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/tfexplorer/models/generated/workloads"
 	"github.com/threefoldtech/tfexplorer/schema"
 	"github.com/threefoldtech/tfgateway/dns"
@@ -21,6 +20,15 @@ var (
 	SubDomainReservation     provision.ReservationType = "subdomain"
 	DomainDeleateReservation provision.ReservationType = "domain-delegate"
 )
+
+// ProvisionOrder is used to sort the workload type
+// in the right order for provision engine
+var ProvisionOrder = map[provision.ReservationType]int{
+	SubDomainReservation:     0,
+	DomainDeleateReservation: 1,
+	ProxyReservation:         2,
+	ReverseProxyReservation:  3,
+}
 
 // Provisioner hold all the logic responsible to provision and decomission
 // the different primitives workloads defined by this package
@@ -89,7 +97,7 @@ func delegateConverter(w workloads.GatewayDelegate) (Delegate, string, error) {
 
 // WorkloadToProvisionType TfgridReservationWorkload1 to provision.Reservation
 func WorkloadToProvisionType(w workloads.ReservationWorkload) (*provision.Reservation, error) {
-	log.Info().Msgf("tfgatway converter %+v", w)
+
 	reservation := &provision.Reservation{
 		ID:        w.WorkloadId,
 		User:      w.User,
