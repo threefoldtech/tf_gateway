@@ -123,7 +123,7 @@ func main() {
 		log.Fatal().Err(err).Msg("failed to register gateway in the explorer")
 	}
 
-	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dns.New(pool, "_dns"))
+	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dns.New(pool))
 
 	engine := provision.New(provision.EngineOps{
 		NodeID: kp.Identity(),

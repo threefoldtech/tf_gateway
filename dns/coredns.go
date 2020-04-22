@@ -7,76 +7,126 @@ import (
 	"net"
 	"strings"
 
+	"github.com/rs/zerolog/log"
+
 	"github.com/gomodule/redigo/redis"
 )
 
 // Mgr is responsible to configure CoreDNS trough its redis pluging
 type Mgr struct {
-	redis  *redis.Pool
-	prefix string
+	redis *redis.Pool
 }
 
 // New creates a DNS manager
-func New(pool *redis.Pool, prefix string) *Mgr {
+func New(pool *redis.Pool) *Mgr {
 	return &Mgr{
-		redis:  pool,
-		prefix: prefix,
+		redis: pool,
 	}
 }
 
-func (c *Mgr) zone(zone string) string {
-	return fmt.Sprintf("%s%s", c.prefix, zone)
+func (c *Mgr) getZoneOwner(zone string) (owner ZoneOwner, err error) {
+	zone = strings.TrimSuffix(zone, ".")
+
+	con := c.redis.Get()
+	defer con.Close()
+
+	data, err := redis.Bytes(con.Do("HGET", "zone", zone))
+	if err != nil {
+		if errors.Is(err, redis.ErrNil) {
+			return owner, nil
+		}
+		return owner, fmt.Errorf("failed to read the DNS zone %s: %w", zone, err)
+	}
+
+	if err := json.Unmarshal(data, &owner); err != nil {
+		return owner, err
+	}
+	return owner, nil
+}
+
+func (c *Mgr) setZoneOwner(zone string, owner ZoneOwner) (err error) {
+	con := c.redis.Get()
+	defer con.Close()
+
+	b, err := json.Marshal(owner)
+	if err != nil {
+		return err
+	}
+
+	_, err = con.Do("HSET", "zone", zone, b)
+	return err
+}
+
+func (c *Mgr) getZoneRecords(zone, name string) (Zone, error) {
+	con := c.redis.Get()
+	defer con.Close()
+
+	zr := Zone{}
+	data, err := redis.Bytes(con.Do("HGET", zone, name))
+	if err != nil {
+		if errors.Is(err, redis.ErrNil) {
+			return zr, nil
+		}
+		return zr, fmt.Errorf("failed to read the DNS zone %s: %w", zone, err)
+	}
+
+	if err := json.Unmarshal(data, &zr.Records); err != nil {
+		return zr, err
+	}
+	return zr, nil
+}
+
+func (c *Mgr) setZoneRecords(zone, name string, zr Zone) (err error) {
+	con := c.redis.Get()
+	defer con.Close()
+
+	b, err := json.Marshal(zr.Records)
+	if err != nil {
+		return err
+	}
+
+	if _, err := con.Do("HSET", zone, name, b); err != nil {
+		return err
+	}
+
+	return nil
 }
 
 // AddSubdomain configures a domain A or AAA records depending on the version of
 // the IP address in IPs
 func (c *Mgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
 
+	log.Info().Msgf("add subdomain %s %+v", domain, IPs)
+
 	name, zone := splitDomain(domain)
 
 	con := c.redis.Get()
 	defer con.Close()
 
-	data, err := redis.Bytes(con.Do("GET", c.zone(zone)))
+	owner, err := c.getZoneOwner(zone)
 	if err != nil {
-		if errors.Is(err, redis.ErrNil) {
-			return fmt.Errorf("the zone %s is not managed by the Gateway. Try delegating the domain before creation subdomain to it", zone)
-		}
 		return fmt.Errorf("failed to read the DNS zone %s: %w", zone, err)
 	}
 
-	z := Zone{}
-	if err := json.Unmarshal(data, &z); err != nil {
-		return err
+	if owner.Owner == "" {
+		return fmt.Errorf("%s is not managed by the gateway. Delegate the domain first", zone)
 	}
 
-	if z.Owner != "" && z.Owner != user {
+	if owner.Owner != user {
 		return fmt.Errorf("%w cannot add subdomain %s to zone %s", ErrAuth, name, zone)
 	}
 
-	for _, ip := range IPs {
-		var r Record
-		if ip.To16() == nil {
-			r = RecordA{
-				IP4: ip.String(),
-				TTL: 3600,
-			}
-		} else {
-			r = RecordAAA{
-				IP6: ip.String(),
-				TTL: 3600,
-			}
-		}
-		z.Add(name, r)
-	}
-
-	b, err := json.Marshal(z)
+	zr, err := c.getZoneRecords(zone, name)
 	if err != nil {
 		return err
 	}
 
-	_, err = con.Do("HSET", c.zone(zone), name, b)
-	return fmt.Errorf("failed to set zone into config store: %w", err)
+	for _, ip := range IPs {
+		r := recordFromIP(ip)
+		zr.Add(r)
+	}
+
+	return c.setZoneRecords(zone, name, zr)
 }
 
 // RemoveSubdomain remove a domain added with AddSubdomain
@@ -86,94 +136,66 @@ func (c *Mgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
 	con := c.redis.Get()
 	defer con.Close()
 
-	data, err := redis.Bytes(con.Do("GET", c.zone(zone)))
+	owner, err := c.getZoneOwner(zone)
+	if err != nil {
+		return fmt.Errorf("failed to read the DNS zone %s: %w", zone, err)
+	}
+
+	if owner.Owner == "" {
+		return fmt.Errorf("%s is not managed by the gateway. Delegate the domain first", domain)
+	}
+
+	if owner.Owner != user {
+		return fmt.Errorf("%w cannot add subdomain %s to zone %s", ErrAuth, name, zone)
+	}
+
+	zr, err := c.getZoneRecords(zone, name)
 	if err != nil {
 		return err
 	}
 
-	z := Zone{}
-	if err := json.Unmarshal(data, &z); err != nil {
-		return err
-	}
-
-	if z.Owner != "" && z.Owner != user {
-		return fmt.Errorf("%w cannot remove subdomain %s from zone %s", ErrAuth, name, zone)
+	if len(zr.Records) == 0 {
+		return nil
 	}
 
 	for _, ip := range IPs {
-		var r Record
-		if ip.To16() == nil {
-			r = RecordA{
-				IP4: ip.String(),
-				TTL: 3600,
-			}
-		} else {
-			r = RecordAAA{
-				IP6: ip.String(),
-				TTL: 3600,
-			}
-		}
-		z.Remove(name, r)
+		r := recordFromIP(ip)
+		zr.Remove(r)
 	}
 
-	b, err := json.Marshal(z)
-	if err != nil {
-		return err
-	}
-
-	_, err = con.Do("HSET", c.zone(zone), name, b)
-	return err
+	return c.setZoneRecords(zone, name, zr)
 }
 
 // AddDomainDelagate configures coreDNS to manage domain
 func (c *Mgr) AddDomainDelagate(user, domain string) error {
-	con := c.redis.Get()
-	defer con.Close()
-
-	data, err := redis.Bytes(con.Do("GET", c.zone(domain)))
+	owner, err := c.getZoneOwner(domain)
 	if err != nil {
 		return err
 	}
 
-	z := Zone{}
-	if err := json.Unmarshal(data, &z); err != nil {
-		return err
-	}
-
-	if z.Owner != "" && z.Owner != user {
+	if owner.Owner != "" && owner.Owner != user {
 		return fmt.Errorf("%w cannot delegate domain %s", ErrAuth, domain)
 	}
 
-	z.Owner = user
-	b, err := json.Marshal(z)
-	if err != nil {
-		return err
-	}
-
-	_, err = con.Do("HSET", c.zone(domain), b)
-	return err
+	owner.Owner = user
+	return c.setZoneOwner(domain, owner)
 }
 
 // RemoveDomainDelagate remove a delagated domain added with AddDomainDelagate
 func (c *Mgr) RemoveDomainDelagate(user string, domain string) error {
-	con := c.redis.Get()
-	defer con.Close()
-
-	data, err := redis.Bytes(con.Do("GET", c.zone(domain)))
+	owner, err := c.getZoneOwner(domain)
 	if err != nil {
 		return err
 	}
 
-	z := Zone{}
-	if err := json.Unmarshal(data, &z); err != nil {
-		return err
-	}
-
-	if z.Owner != "" && z.Owner != user {
+	if owner.Owner != "" && owner.Owner != user {
 		return fmt.Errorf("%w cannot remove delegated domain %s", ErrAuth, domain)
 	}
 
-	_, err = con.Do("HDEL", c.zone(domain))
+	con := c.redis.Get()
+	defer con.Close()
+
+	_, err = con.Do("HDEL", "zone", domain)
 	return err
 }
 
@@ -183,4 +205,19 @@ func splitDomain(d string) (name, domain string) {
 		return "", d + "."
 	}
 	return ss[0], strings.Join(ss[1:], ".") + "."
+}
+
+func recordFromIP(ip net.IP) (r Record) {
+	if ip.To4() != nil {
+		r = RecordA{
+			IP4: ip.String(),
+			TTL: 3600,
+		}
+	} else {
+		r = RecordAAAA{
+			IP6: ip.String(),
+			TTL: 3600,
+		}
+	}
+	return r
 }
