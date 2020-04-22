@@ -142,7 +142,9 @@ func (c *Mgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
 	}
 
 	if owner.Owner == "" {
-		return fmt.Errorf("%s is not managed by the gateway. Delegate the domain first", domain)
+		// domain not managed by this gatewat at all, so all subdomain are already gone too.
+		// this can happen when a delegated domain expires before a subdomain
+		return nil
 	}
 
 	if owner.Owner != user {
@@ -195,7 +197,11 @@ func (c *Mgr) RemoveDomainDelagate(user string, domain string) error {
 	con := c.redis.Get()
 	defer con.Close()
 
-	_, err = con.Do("HDEL", "zone", domain)
+	if _, err = con.Do("HDEL", "zone", domain); err != nil {
+		return err
+	}
+	// remove all eventual subdomain configuration for this delegated domain
+	_, err = con.Do("HDEL", domain)
 	return err
 }
 

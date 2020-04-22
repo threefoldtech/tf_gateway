@@ -15,10 +15,10 @@ import (
 
 // ReservationType enum list all the supported primitives but the tfgateway
 var (
-	ProxyReservation         provision.ReservationType = "proxy"
-	ReverseProxyReservation  provision.ReservationType = "reserve-proxy"
-	SubDomainReservation     provision.ReservationType = "subdomain"
-	DomainDeleateReservation provision.ReservationType = "domain-delegate"
+	ProxyReservation         = provision.ReservationType(workloads.WorkloadTypeProxy.String())
+	ReverseProxyReservation  = provision.ReservationType(workloads.WorkloadTypeReverseProxy.String())
+	SubDomainReservation     = provision.ReservationType(workloads.WorkloadTypeSubDomain.String())
+	DomainDeleateReservation = provision.ReservationType(workloads.WorkloadTypeDomainDelegate.String())
 )
 
 // ProvisionOrder is used to sort the workload type
