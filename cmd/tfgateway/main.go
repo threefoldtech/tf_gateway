@@ -17,7 +17,6 @@ import (
 	"github.com/threefoldtech/tfgateway/proxy"
 	"github.com/threefoldtech/zos/pkg/crypto"
 	"github.com/threefoldtech/zos/pkg/provision/explorer"
-	"github.com/threefoldtech/zos/pkg/provision/primitives/cache"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
@@ -25,6 +24,7 @@ import (
 	"github.com/threefoldtech/tfexplorer/client"
 	"github.com/threefoldtech/tfexplorer/models/generated/directory"
 	"github.com/threefoldtech/tfgateway"
+	"github.com/threefoldtech/tfgateway/cache"
 	"github.com/threefoldtech/zos/pkg/app"
 	"github.com/threefoldtech/zos/pkg/geoip"
 	"github.com/threefoldtech/zos/pkg/identity"
@@ -82,10 +82,7 @@ func main() {
 	}
 
 	staster := &tfgateway.Counters{}
-	localStore, err := cache.NewFSStore(filepath.Join(storageDir, "reservations"))
-	if err != nil {
-		log.Fatal().Err(err).Msg("failed to create local reservation store")
-	}
+	localStore := cache.NewRedis(pool)
 	if err := localStore.Sync(staster); err != nil {
 		log.Fatal().Err(err).Msg("failed to sync statser with reservation from cache")
 	}
