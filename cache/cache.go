@@ -18,7 +18,7 @@ var (
 	reservationSchemaLastVersion = reservationSchemaV1
 )
 
-const _reservationsKey = "tfgateway_reservations"
+const reservationsKey = "tfgateway_reservations"
 
 // Redis is a in reservation cache using the filesystem as backend
 type Redis struct {
@@ -42,7 +42,7 @@ func (s *Redis) Sync(statser provision.Statser) error {
 	con := s.pool.Get()
 	defer con.Close()
 
-	ids, err := redis.ByteSlices(con.Do("HKEYS", _reservationsKey))
+	ids, err := redis.ByteSlices(con.Do("HKEYS", reservationsKey))
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (s *Redis) Add(r *provision.Reservation) error {
 		return err
 	}
 
-	_, err = con.Do("HSET", _reservationsKey, r.ID, buf.Bytes())
+	_, err = con.Do("HSET", reservationsKey, r.ID, buf.Bytes())
 	return err
 }
 
@@ -88,7 +88,7 @@ func (s *Redis) Remove(id string) error {
 	con := s.pool.Get()
 	defer con.Close()
 
-	_, err := con.Do("HDEL", _reservationsKey, id)
+	_, err := con.Do("HDEL", reservationsKey, id)
 	return err
 }
 
@@ -101,7 +101,7 @@ func (s *Redis) GetExpired() ([]*provision.Reservation, error) {
 	con := s.pool.Get()
 	defer con.Close()
 
-	ids, err := redis.ByteSlices(con.Do("HKEYS", _reservationsKey))
+	ids, err := redis.ByteSlices(con.Do("HKEYS", reservationsKey))
 	if err != nil {
 		return nil, err
 	}
@@ -114,7 +114,7 @@ func (s *Redis) GetExpired() ([]*provision.Reservation, error) {
 		}
 
 		if r.Expired() {
-			// r.Tag = Tag{"source": "FSStore"}
+			r.Tag = provision.Tag{"source": "tfgateway_cache"}
 			rs = append(rs, r)
 		}
 	}
@@ -139,14 +139,14 @@ func (s *Redis) Exists(id string) (bool, error) {
 	con := s.pool.Get()
 	defer con.Close()
 
-	return redis.Bool(con.Do("HEXISTS", _reservationsKey, id))
+	return redis.Bool(con.Do("HEXISTS", reservationsKey, id))
 }
 
 func (s *Redis) get(id string) (*provision.Reservation, error) {
 	con := s.pool.Get()
 	defer con.Close()
 
-	b, err := redis.Bytes(con.Do("HGET", _reservationsKey, id))
+	b, err := redis.Bytes(con.Do("HGET", reservationsKey, id))
 	if err != nil {
 		return nil, err
 	}
@@ -168,7 +168,7 @@ func (s *Redis) get(id string) (*provision.Reservation, error) {
 	} else {
 		return nil, fmt.Errorf("unknown reservation object version (%s)", reader.Version())
 	}
-	// reservation.Tag = Tag{"source": "FSStore"}
+	reservation.Tag = provision.Tag{"source": "tfgateway_cache"}
 	return &reservation, nil
 }
 
