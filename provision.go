@@ -24,8 +24,8 @@ var (
 // ProvisionOrder is used to sort the workload type
 // in the right order for provision engine
 var ProvisionOrder = map[provision.ReservationType]int{
-	SubDomainReservation:     0,
-	DomainDeleateReservation: 1,
+	DomainDeleateReservation: 0,
+	SubDomainReservation:     1,
 	ProxyReservation:         2,
 	ReverseProxyReservation:  3,
 }
