@@ -20,7 +20,6 @@ require (
 	github.com/opencontainers/image-spec v1.0.1 // indirect
 	github.com/opencontainers/runc v0.1.1 // indirect
 	github.com/pkg/errors v0.9.1
-	github.com/polydawn/refmt v0.0.0-20190807091052-3d65705ee9f1
 	github.com/rs/zerolog v1.18.0
 	github.com/shirou/gopsutil v2.19.11+incompatible
 	github.com/shirou/w32 v0.0.0-20160930032740-bb4de0191aa4 // indirect
@@ -28,7 +27,6 @@ require (
 	github.com/syndtr/gocapability v0.0.0-20180916011248-d98352740cb2 // indirect
 	github.com/threefoldtech/tfexplorer v0.0.0-00010101000000-000000000000
 	github.com/threefoldtech/zos v0.2.3
-	github.com/warpfork/go-wish v0.0.0-20200122115046-b9ea61034e4a // indirect
 	go.etcd.io/bbolt v1.3.1-etcd.8 // indirect
 	gopkg.in/yaml.v2 v2.2.8 // indirect
 )
