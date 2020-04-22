@@ -4,79 +4,99 @@ import (
 	"context"
 	"crypto/ed25519"
 	"encoding/hex"
-	"flag"
 	"fmt"
 	"os"
-	"path/filepath"
 	"time"
 
 	"github.com/cenkalti/backoff/v3"
 
 	"github.com/shirou/gopsutil/host"
+	"github.com/threefoldtech/tfgateway"
+	"github.com/threefoldtech/tfgateway/cache"
 	"github.com/threefoldtech/tfgateway/dns"
 	"github.com/threefoldtech/tfgateway/proxy"
+	"github.com/threefoldtech/zos/pkg/app"
 	"github.com/threefoldtech/zos/pkg/crypto"
+	"github.com/threefoldtech/zos/pkg/geoip"
+	"github.com/threefoldtech/zos/pkg/provision"
 	"github.com/threefoldtech/zos/pkg/provision/explorer"
+	"github.com/threefoldtech/zos/pkg/utils"
+	"github.com/threefoldtech/zos/pkg/version"
 
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
 	"github.com/threefoldtech/tfexplorer/client"
 	"github.com/threefoldtech/tfexplorer/models/generated/directory"
-	"github.com/threefoldtech/tfgateway"
-	"github.com/threefoldtech/tfgateway/cache"
-	"github.com/threefoldtech/zos/pkg/app"
-	"github.com/threefoldtech/zos/pkg/geoip"
 	"github.com/threefoldtech/zos/pkg/identity"
-	"github.com/threefoldtech/zos/pkg/provision"
-	"github.com/threefoldtech/zos/pkg/utils"
-	"github.com/threefoldtech/zos/pkg/version"
+	"github.com/urfave/cli/v2"
 )
 
+var appCLI = cli.App{
+	Version: version.Current().String(),
+	Usage:   "",
+	Flags: []cli.Flag{
+		&cli.StringFlag{
+			Name:  "seed",
+			Value: "identity.seed",
+			Usage: "path to the file containing the identity seed",
+		},
+		&cli.StringFlag{
+			Name:  "explorer",
+			Value: "https://explorer.grid.tf/explorer",
+			Usage: "URL to the explorer API used to poll reservations",
+		},
+		&cli.StringFlag{
+			Name:  "redis",
+			Value: "tcp://localhost:6379",
+			Usage: "address of the redis configuration server",
+		},
+		&cli.BoolFlag{
+			Name:  "debug",
+			Usage: "enable debug logging",
+		},
+		&cli.StringSliceFlag{
+			Name:  "nameservers",
+			Usage: "list of DNS nameserver used by this TFGateway. User use this value to know where to point there NS record in order to delegate domain to the TFGateway",
+		},
+		&cli.StringSliceFlag{
+			Name:  "domains",
+			Usage: "list of domain managed by this TFGateway. User can create free subdomain of any domain managed by TFGateway",
+		},
+		&cli.Int64Flag{
+			Name:  "tcp-client-port",
+			Usage: "the listening port on which the TCP router client needs to connect to in order to initiate a reverse tunnel",
+			Value: 18000,
+		},
+	},
+	Before: func(c *cli.Context) error {
+		app.Initialize()
+
+		// Default level for this example is info, unless debug flag is present
+		zerolog.SetGlobalLevel(zerolog.InfoLevel)
+		if c.Bool("debug") {
+			zerolog.SetGlobalLevel(zerolog.DebugLevel)
+		}
+
+		return nil
+	},
+	Action: run,
+}
+
 func main() {
-	app.Initialize()
-
-	var (
-		explorerAddr string
-		redisAddr    string
-		seed         string
-		storageDir   string
-		debug        bool
-		ver          bool
-	)
-
-	flag.StringVar(&seed, "seed", "identity.seed", "path to the file containing the identity seed")
-	flag.StringVar(&explorerAddr, "explorer", "https://explorer.grid.tf/explorer", "URL to the explorer API used to poll reservations")
-	flag.StringVar(&redisAddr, "redis", "tcp://localhost:6379", "Addr of the redis configuration server")
-	flag.StringVar(&storageDir, "data-dir", "tfgateway_datadir", "directory used by tfgateway to store temporary data")
-	flag.BoolVar(&debug, "debug", false, "enable debug logging")
-	flag.BoolVar(&ver, "v", false, "show version and exit")
-
-	flag.Parse()
-	if ver {
-		version.ShowAndExit(false)
+	err := appCLI.Run(os.Args)
+	if err != nil {
+		log.Fatal().Err(err).Send()
 	}
+}
 
-	// Default level for this example is info, unless debug flag is present
-	zerolog.SetGlobalLevel(zerolog.InfoLevel)
-	if debug {
-		zerolog.SetGlobalLevel(zerolog.DebugLevel)
-	}
-
-	flag.Parse()
-
-	pool, err := newRedisPool(redisAddr)
+func run(c *cli.Context) error {
+	pool, err := newRedisPool(c.String("redis"))
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to connec to redis configuration server")
 	}
 
-	if err := os.MkdirAll(storageDir, 0770); err != nil {
-		log.Fatal().Err(err).Msg("failed to create cache directory")
-	}
-
-	app.BootedPath = filepath.Join(storageDir, "booted")
-
-	kp, err := ensureID(seed)
+	kp, err := ensureID(c.String("seed"))
 	if err != nil {
 		log.Fatal().Err(err).Msg("")
 	}
@@ -88,7 +108,7 @@ func main() {
 	}
 
 	wgID := gwIdentity{kp}
-	e, err := client.NewClient(explorerAddr, wgID)
+	e, err := client.NewClient(c.String("explorer"), wgID)
 	if err != nil {
 		log.Fatal().Err(err).Msg("failed to instantiate explorer client")
 	}
@@ -109,9 +129,9 @@ func main() {
 			Longitude: loc.Longitute,
 			Latitude:  loc.Latitude,
 		},
-		// ManagedDomains: ,
-		// TcpRouterPort: ,
-		// DnsNameserver: ,
+		ManagedDomains: c.StringSlice("domains"),
+		DnsNameserver:  c.StringSlice("nameservers"),
+		TcpRouterPort:  c.Int64("tcp-client-port"),
 	}
 
 	bo := backoff.NewExponentialBackOff()
@@ -154,6 +174,7 @@ func main() {
 		log.Error().Err(err).Msg("unexpected error")
 	}
 	log.Info().Msg("provision engine stopped")
+	return nil
 }
 
 func registerID(gw directory.Gateway, expl *client.Client) func() error {

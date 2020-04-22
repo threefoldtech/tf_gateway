@@ -31,7 +31,7 @@ func New(pool *redis.Pool) *Mgr {
 }
 
 func (r *Mgr) key(domain string) string {
-	return fmt.Sprintf("/tcprouter/services/%s", domain)
+	return fmt.Sprintf("/tcprouter/service/%s", domain)
 }
 
 func (r *Mgr) canUseDomain(user string, domain string) (bool, error) {
