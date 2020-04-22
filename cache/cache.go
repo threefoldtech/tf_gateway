@@ -131,16 +131,6 @@ func (s *Redis) Get(id string) (*provision.Reservation, error) {
 	return s.get(id)
 }
 
-// getType retrieves a specific reservation's type using its ID
-// if returns a non nil error if the reservation is not present in the store
-func (s *Redis) getType(id string) (provision.ReservationType, error) {
-	r, err := s.get(id)
-	if err != nil {
-		return provision.ReservationType(0), err
-	}
-	return r.Type, nil
-}
-
 // Exists checks if the reservation ID is in the store
 func (s *Redis) Exists(id string) (bool, error) {
 	s.RLock()

@@ -18,15 +18,11 @@ func TestLocalStore(t *testing.T) {
 
 	cache := NewRedis(pool)
 
-	type fields struct {
-		root string
-	}
 	type args struct {
 		r *provision.Reservation
 	}
 	tests := []struct {
 		name    string
-		fields  fields
 		args    args
 		wantErr bool
 	}{

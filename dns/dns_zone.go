@@ -124,6 +124,7 @@ func (rs records) UnmarshalJSON(b []byte) error {
 	return nil
 }
 
+// ZoneOwner contains the ThreebotID linked to a delagated zone
 type ZoneOwner struct {
 	Owner string //threebot ID owning this zone
 }

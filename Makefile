@@ -15,7 +15,7 @@ getdeps:
 	@echo "Installing misspell" && go get -u github.com/client9/misspell/cmd/misspell
 	@echo "Installing ineffassign" && go get -u github.com/gordonklaus/ineffassign
 
-verifiers: vet fmt lint cyclo spelling staticcheck deadcode
+verifiers: vet fmt lint cyclo spelling staticcheck
 
 vet:
 	@echo "Running $@"
