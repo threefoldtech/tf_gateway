@@ -61,7 +61,7 @@ func (c *Mgr) getZoneRecords(zone, name string) (Zone, error) {
 	con := c.redis.Get()
 	defer con.Close()
 
-	zr := Zone{}
+	zr := Zone{Records: records{}}
 	data, err := redis.Bytes(con.Do("HGET", zone, name))
 	if err != nil {
 		if errors.Is(err, redis.ErrNil) {
@@ -73,10 +73,12 @@ func (c *Mgr) getZoneRecords(zone, name string) (Zone, error) {
 	if err := json.Unmarshal(data, &zr.Records); err != nil {
 		return zr, err
 	}
+	log.Debug().Msgf("get zone records %+v", zr)
 	return zr, nil
 }
 
 func (c *Mgr) setZoneRecords(zone, name string, zr Zone) (err error) {
+	log.Debug().Msgf("zet zone records %+v", zr)
 	con := c.redis.Get()
 	defer con.Close()
 

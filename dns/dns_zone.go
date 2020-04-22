@@ -1,5 +1,7 @@
 package dns
 
+import "encoding/json"
+
 // RecordType is the enum type for all supported DNS record
 type RecordType string
 
@@ -50,13 +52,13 @@ func (r RecordCname) Type() RecordType {
 
 // Zone is a DNS zone. It hosts multiple records and belong to a owner
 type Zone struct {
-	Records map[RecordType][]Record
+	Records records
 }
 
 // Add adds a record to the zone
 func (z *Zone) Add(r Record) {
 	if z.Records == nil {
-		z.Records = map[RecordType][]Record{}
+		z.Records = records{}
 	}
 
 	z.Records[r.Type()] = append(z.Records[r.Type()], r)
@@ -65,7 +67,7 @@ func (z *Zone) Add(r Record) {
 // Remove removes a record from the zone
 func (z *Zone) Remove(r Record) {
 	if z.Records == nil {
-		z.Records = map[RecordType][]Record{}
+		z.Records = records{}
 	}
 
 	_, ok := z.Records[r.Type()]
@@ -80,69 +82,47 @@ func (z *Zone) Remove(r Record) {
 	}
 }
 
-// // SubdomainRecords is a list of record for a subdomain
-// type SubdomainRecords []Record
+type records map[RecordType][]Record
 
-// // Add adds a record to the zone
-// func (r *SubdomainRecords) Add(record Record) {
-// 	if r == nil {
-// 		r = &SubdomainRecords{}
-// 	}
+// UnmarshalJSON implements encoding/json.Unmarshaler interface
+func (rs records) UnmarshalJSON(b []byte) error {
+	if rs == nil {
+		rs = map[RecordType][]Record{}
+	}
 
-// 	// avoid to add 2 time the same record
-// 	for i := range *r {
-// 		if (*r)[i] == record {
-// 			return
-// 		}
-// 	}
+	m := make(map[RecordType][]json.RawMessage)
+	if err := json.Unmarshal(b, &m); err != nil {
+		return err
+	}
 
-// 	*r = append(*r, record)
-// }
-
-// // Remove removes a record from the zone
-// func (r *SubdomainRecords) Remove(record Record) {
-// 	if r == nil {
-// 		r = &SubdomainRecords{}
-// 	}
-
-// 	for i := range *r {
-// 		if (*r)[i] == record {
-// 			*r = append((*r)[:i], (*r)[i+1:]...)
-// 		}
-// 	}
-// }
-
-// func (r *SubdomainRecords) MarshalJSON() ([]byte, error) {
-// 	output := make(map[string][]Record, len(*r))
-
-// 	for i := range *r {
-// 		record := (*r)[i]
-// 		if _, ok := output[string(record.Type())]; !ok {
-// 			output[string(record.Type())] = []Record{}
-// 		}
-// 		output[string(record.Type())] = append(output[string(record.Type())], record)
-// 	}
-
-// 	return json.Marshal(output)
-// }
-
-// func (r *SubdomainRecords) UnmarshalJSON(data []byte, v interface{}) error {
-
-// 	sdr := v.(SubdomainRecords)
-
-// 	input := make(map[string][]Record, len(*r))
-// 	if err := json.Unmarshal(data, &input); err != nil {
-// 		return err
-// 	}
-// 	for t, r := range input {
-// 		switch t {
-// 		case RecordA:
-
-// 		}
-// 	}
-
-// 	return json.Marshal(output)
-// }
+	for typ, records := range m {
+		for _, b := range records {
+			var r Record
+			switch typ {
+			case RecordTypeA:
+				x := RecordA{}
+				if err := json.Unmarshal(b, &x); err != nil {
+					return err
+				}
+				r = x
+			case RecordTypeAAAA:
+				x := RecordAAAA{}
+				if err := json.Unmarshal(b, &x); err != nil {
+					return err
+				}
+				r = x
+			case RecordTypeCNAME:
+				x := RecordCname{}
+				if err := json.Unmarshal(b, &x); err != nil {
+					return err
+				}
+				r = x
+			}
+			rs[typ] = append(rs[typ], r)
+		}
+	}
+	return nil
+}
 
 type ZoneOwner struct {
 	Owner string //threebot ID owning this zone
