@@ -105,8 +105,7 @@ func WorkloadToProvisionType(w workloads.ReservationWorkload) (*provision.Reserv
 		Created:   w.Created.Time,
 		Duration:  time.Duration(w.Duration) * time.Second,
 		Signature: []byte(w.Signature),
-		// Data:      w.Content,
-		ToDelete: w.ToDelete,
+		ToDelete:  w.ToDelete,
 	}
 
 	var (
