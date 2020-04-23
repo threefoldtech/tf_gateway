@@ -10,3 +10,8 @@
 
 # Output of the go coverage tool, specifically when used with LiteIDE
 *.out
+
+tfgateway
+tfgateway_datadir/
+bin/
+*.seed
