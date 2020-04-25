@@ -58,6 +58,34 @@ func (s *Redis) Sync(statser provision.Statser) error {
 	return nil
 }
 
+// ClearByType remove all the reservation of a certain type from the cache
+func (s *Redis) ClearByType(types []provision.ReservationType) error {
+	con := s.pool.Get()
+	defer con.Close()
+
+	ids, err := redis.ByteSlices(con.Do("HKEYS", reservationsKey))
+	if err != nil {
+		return err
+	}
+
+	for _, id := range ids {
+		r, err := s.get(string(id))
+		if err != nil {
+			return err
+		}
+
+		for _, typ := range types {
+			if r.Type == typ {
+				if err := s.Remove(string(id)); err != nil {
+					return err
+				}
+			}
+		}
+	}
+
+	return nil
+}
+
 // Add a reservation to the store
 func (s *Redis) Add(r *provision.Reservation) error {
 	s.Lock()

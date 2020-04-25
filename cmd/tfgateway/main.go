@@ -15,6 +15,7 @@ import (
 	"github.com/threefoldtech/tfgateway/cache"
 	"github.com/threefoldtech/tfgateway/dns"
 	"github.com/threefoldtech/tfgateway/proxy"
+	"github.com/threefoldtech/tfgateway/wg"
 	"github.com/threefoldtech/zos/pkg/app"
 	"github.com/threefoldtech/zos/pkg/crypto"
 	"github.com/threefoldtech/zos/pkg/geoip"
@@ -68,6 +69,15 @@ var appCLI = cli.App{
 			Usage: "the listening port on which the TCP router client needs to connect to in order to initiate a reverse tunnel",
 			Value: 18000,
 		},
+		&cli.StringFlag{
+			Name:  "endpoint",
+			Usage: "listening address of the wireguard interface, format: host:port",
+		},
+		&cli.StringFlag{
+			Name:  "wg-iface",
+			Usage: "name of the wireguard interface created for the 4to6 tunnel primitive",
+			Value: "wg-tfgateway",
+		},
 	},
 	Before: func(c *cli.Context) error {
 		app.Initialize()
@@ -93,29 +103,29 @@ func main() {
 func run(c *cli.Context) error {
 	pool, err := newRedisPool(c.String("redis"))
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to connec to redis configuration server")
+		return fmt.Errorf("failed to connec to redis configuration server: %w", err)
 	}
 
 	kp, err := ensureID(c.String("seed"))
 	if err != nil {
-		log.Fatal().Err(err).Msg("")
+		return err
 	}
 
 	staster := &tfgateway.Counters{}
 	localStore := cache.NewRedis(pool)
 	if err := localStore.Sync(staster); err != nil {
-		log.Fatal().Err(err).Msg("failed to sync statser with reservation from cache")
+		return fmt.Errorf("failed to sync statser with reservation from cache: %w", err)
 	}
 
 	wgID := gwIdentity{kp}
 	e, err := client.NewClient(c.String("explorer"), wgID)
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to instantiate explorer client")
+		return fmt.Errorf("failed to instantiate explorer client: %w", err)
 	}
 
 	loc, err := geoip.Fetch()
 	if err != nil {
-		log.Fatal().Err(err).Msg("failed to fetch location")
+		return fmt.Errorf("failed to fetch location: %w", err)
 	}
 
 	gw := directory.Gateway{
@@ -137,10 +147,40 @@ func run(c *cli.Context) error {
 	bo := backoff.NewExponentialBackOff()
 	bo.MaxElapsedTime = 0
 	if err := backoff.Retry(registerID(gw, e), bo); err != nil {
-		log.Fatal().Err(err).Msg("failed to register gateway in the explorer")
+		return fmt.Errorf("failed to register gateway in the explorer: %w", err)
 	}
 
-	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dns.New(pool))
+	var wgMgr *wg.Mgr
+	if is4To6Enabled(c) {
+
+		// the Gateway4To6 workloads doesn't not survice gateway restart, so we clear all reservations from the
+		// cache so they are always re-provisionned
+		if err := localStore.ClearByType([]provision.ReservationType{tfgateway.Gateway4To6Reservation}); err != nil {
+			return err
+		}
+
+		var (
+			endpoint = c.String("endpoint")
+			wgIface  = c.String("wg-iface")
+		)
+		log.Info().
+			Str("endpoint", endpoint).
+			Str("wg-iface", wgIface).
+			Msg("gateway 4 to 6 enabled")
+
+		wgMgr, err = wg.New(kp, wg.NewIPPool(kp), endpoint, wgIface)
+		if err != nil {
+			return err
+		}
+
+		defer func() {
+			if err := wgMgr.Close(); err != nil {
+				log.Error().Err(err).Msgf("failed to cleanup network namespace")
+			}
+		}()
+	}
+
+	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dns.New(pool), wgMgr)
 
 	engine := provision.New(provision.EngineOps{
 		NodeID: kp.Identity(),
@@ -265,4 +305,13 @@ func (u *uptimeTicker) Start(ctx context.Context) {
 		}
 	}()
 
+}
+
+func is4To6Enabled(c *cli.Context) bool {
+	for _, s := range []string{c.String("endpoint"), c.String("wg-iface")} {
+		if s == "" {
+			return false
+		}
+	}
+	return true
 }
