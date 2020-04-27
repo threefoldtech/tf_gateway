@@ -10,6 +10,7 @@ import (
 	"github.com/threefoldtech/tfexplorer/schema"
 	"github.com/threefoldtech/tfgateway/dns"
 	"github.com/threefoldtech/tfgateway/proxy"
+	"github.com/threefoldtech/tfgateway/wg"
 	"github.com/threefoldtech/zos/pkg/provision"
 )
 
@@ -19,6 +20,7 @@ var (
 	ReverseProxyReservation  = provision.ReservationType(workloads.WorkloadTypeReverseProxy.String())
 	SubDomainReservation     = provision.ReservationType(workloads.WorkloadTypeSubDomain.String())
 	DomainDeleateReservation = provision.ReservationType(workloads.WorkloadTypeDomainDelegate.String())
+	Gateway4To6Reservation   = provision.ReservationType(workloads.WorkloadTypeGateway4To6.String())
 )
 
 // ProvisionOrder is used to sort the workload type
@@ -28,6 +30,7 @@ var ProvisionOrder = map[provision.ReservationType]int{
 	SubDomainReservation:     1,
 	ProxyReservation:         2,
 	ReverseProxyReservation:  3,
+	Gateway4To6Reservation:   4,
 }
 
 // Provisioner hold all the logic responsible to provision and decomission
@@ -35,16 +38,18 @@ var ProvisionOrder = map[provision.ReservationType]int{
 type Provisioner struct {
 	proxy *proxy.Mgr
 	dns   *dns.Mgr
+	wg    *wg.Mgr
 
 	Provisioners    map[provision.ReservationType]provision.ProvisionerFunc
 	Decommissioners map[provision.ReservationType]provision.DecomissionerFunc
 }
 
 // NewProvisioner creates a new 0-OS provisioner
-func NewProvisioner(proxy *proxy.Mgr, dns *dns.Mgr) *Provisioner {
+func NewProvisioner(proxy *proxy.Mgr, dns *dns.Mgr, wg *wg.Mgr) *Provisioner {
 	p := &Provisioner{
 		proxy: proxy,
 		dns:   dns,
+		wg:    wg,
 	}
 	p.Provisioners = map[provision.ReservationType]provision.ProvisionerFunc{
 		ProxyReservation:         p.proxyProvision,
@@ -58,6 +63,12 @@ func NewProvisioner(proxy *proxy.Mgr, dns *dns.Mgr) *Provisioner {
 		SubDomainReservation:     p.subDomainDecomission,
 		DomainDeleateReservation: p.domainDeleateDecomission,
 	}
+
+	if wg != nil {
+		p.Provisioners[Gateway4To6Reservation] = p.gateway4To6Provision
+		p.Decommissioners[Gateway4To6Reservation] = p.gateway4To6Decomission
+	}
+
 	return p
 }
 
@@ -92,6 +103,12 @@ func subdomainConverter(w workloads.GatewaySubdomain) (Subdomain, string, error)
 func delegateConverter(w workloads.GatewayDelegate) (Delegate, string, error) {
 	return Delegate{
 		Domain: w.Domain,
+	}, w.NodeId, nil
+}
+
+func gateway4To6Converter(w workloads.Gateway4To6) (Gateway4to6, string, error) {
+	return Gateway4to6{
+		PublicKey: w.PublicKey,
 	}, w.NodeId, nil
 }
 
@@ -134,6 +151,11 @@ func WorkloadToProvisionType(w workloads.ReservationWorkload) (*provision.Reserv
 		if err != nil {
 			return nil, err
 		}
+	case workloads.Gateway4To6:
+		data, reservation.NodeID, err = gateway4To6Converter(tmp)
+		if err != nil {
+			return nil, err
+		}
 	default:
 		return nil, fmt.Errorf("unknown workload type (%s) (%T)", w.Type.String(), tmp)
 	}
@@ -149,16 +171,18 @@ func WorkloadToProvisionType(w workloads.ReservationWorkload) (*provision.Reserv
 // ResultToSchemaType converts result to schema type
 func ResultToSchemaType(r provision.Result) (*workloads.Result, error) {
 
-	var rType workloads.ResultCategoryEnum
+	var rType workloads.WorkloadTypeEnum
 	switch r.Type {
 	case ProxyReservation:
-		rType = workloads.ResultCategoryProxy
+		rType = workloads.WorkloadTypeProxy
 	case ReverseProxyReservation:
-		rType = workloads.ResultCategoryReverseProxy
+		rType = workloads.WorkloadTypeReverseProxy
 	case SubDomainReservation:
-		rType = workloads.ResultCategorySubDomain
+		rType = workloads.WorkloadTypeSubDomain
 	case DomainDeleateReservation:
-		rType = workloads.ResultCategoryDomainDelegate
+		rType = workloads.WorkloadTypeDomainDelegate
+	case Gateway4To6Reservation:
+		rType = workloads.WorkloadTypeGateway4To6
 	default:
 		return nil, fmt.Errorf("unknown reservation type: %s", r.Type)
 	}
