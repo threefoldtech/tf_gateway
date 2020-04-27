@@ -6,10 +6,8 @@ import (
 	"strconv"
 	"time"
 
-	"github.com/containernetworking/plugins/pkg/ns"
 	"github.com/containernetworking/plugins/pkg/utils/sysctl"
 	"github.com/threefoldtech/zos/pkg/identity"
-	"github.com/threefoldtech/zos/pkg/network/namespace"
 	"github.com/threefoldtech/zos/pkg/network/wireguard"
 	"github.com/vishvananda/netlink"
 	"golang.zx2c4.com/wireguard/wgctrl"
@@ -65,72 +63,78 @@ func New(kp identity.KeyPair, ipAlloc *IPPool, endpoint string, wgIface string) 
 func (m *Mgr) setupWGNamespace() error {
 	iface, err := wireguard.New(m.wgIface)
 	if err != nil {
-		return err
+		return fmt.Errorf("failed to create wireguard interface: %w", err)
 	}
 
-	netns, err := namespace.Create(m.nsName)
+	// netns, err := namespace.Create(m.nsName)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer netns.Close()
+
+	// if err := netlink.LinkSetNsFd(iface, int(netns.Fd())); err != nil {
+	// 	return err
+	// }
+
+	// err = netns.Do(func(_ ns.NetNS) error {
+	if _, err := sysctl.Sysctl("net.ipv6.conf.all.forwarding", "1"); err != nil {
+		return fmt.Errorf("failed to enable ipv6 forwarding: %w", err)
+	}
+
+	lo, err := netlink.LinkByName("lo")
+	if err != nil {
+		return fmt.Errorf("failed to get lo link: %w", err)
+	}
+
+	if err := netlink.LinkSetUp(lo); err != nil {
+		return fmt.Errorf("failed to bring lo up: %w", err)
+	}
+
+	if err := iface.SetAddr(m.ipAlloc.Gateway().String()); err != nil {
+		return fmt.Errorf("failed to set addr on wg iface: %w", err)
+	}
+
+	cl, err := wgctrl.New()
+	if err != nil {
+		return fmt.Errorf("failed to create wireguard controller: %w", err)
+	}
+	defer cl.Close()
+
+	_, sp, err := net.SplitHostPort(m.endpoint)
 	if err != nil {
 		return err
 	}
-	defer netns.Close()
-
-	if err := netlink.LinkSetNsFd(iface, int(netns.Fd())); err != nil {
+	port, err := strconv.Atoi(sp)
+	if err != nil {
 		return err
 	}
 
-	err = netns.Do(func(_ ns.NetNS) error {
-		if _, err := sysctl.Sysctl("net.ipv6.conf.all.forwarding", "1"); err != nil {
-			return err
-		}
-
-		lo, err := netlink.LinkByName("lo")
-		if err != nil {
-			return err
-		}
-
-		if err := netlink.LinkSetUp(lo); err != nil {
-			return err
-		}
-
-		if err := iface.SetAddr(m.ipAlloc.Gateway().String()); err != nil {
-			return err
-		}
-
-		cl, err := wgctrl.New()
-		if err != nil {
-			return err
-		}
-		defer cl.Close()
-
-		_, sp, err := net.SplitHostPort(m.endpoint)
-		if err != nil {
-			return err
-		}
-		port, err := strconv.Atoi(sp)
-		if err != nil {
-			return err
-		}
-
-		err = cl.ConfigureDevice(m.wgIface, wgtypes.Config{
-			PrivateKey: &m.priv,
-			ListenPort: &port,
-		})
-		if err != nil {
-			return err
-		}
-
-		return netlink.LinkSetUp(iface)
+	err = cl.ConfigureDevice(m.wgIface, wgtypes.Config{
+		PrivateKey: &m.priv,
+		ListenPort: &port,
 	})
-	return err
+	if err != nil {
+		return fmt.Errorf("failed to configure wireguard interface: %w", err)
+	}
+
+	return netlink.LinkSetUp(iface)
+	// })
+	// return err
 }
 
 // Close removes the network namespace and wireguard interface
 func (m *Mgr) Close() error {
-	netns, err := namespace.GetByName(m.nsName)
+	iface, err := wireguard.GetByName(m.wgIface)
 	if err != nil {
 		return err
 	}
-	return namespace.Delete(netns)
+
+	return netlink.LinkDel(iface)
+	// netns, err := namespace.GetByName(m.nsName)
+	// if err != nil {
+	// 	return err
+	// }
+	// return namespace.Delete(netns)
 }
 
 // AddPeer addd a peer identified by pubkey to the wireguard network
@@ -168,79 +172,79 @@ func (m *Mgr) RemovePeer(pubKey string) error {
 }
 
 func (m *Mgr) appendPeer(peer Peer) error {
-	netNS, err := namespace.GetByName(m.nsName)
+	// netNS, err := namespace.GetByName(m.nsName)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer netNS.Close()
+
+	// return netNS.Do(func(_ ns.NetNS) error {
+	cl, err := wgctrl.New()
 	if err != nil {
 		return err
 	}
-	defer netNS.Close()
+	defer cl.Close()
 
-	return netNS.Do(func(_ ns.NetNS) error {
-		cl, err := wgctrl.New()
+	k, err := wgtypes.ParseKey(peer.PublicKey)
+	if err != nil {
+		return err
+	}
+
+	aips := make([]net.IPNet, len(peer.AllowedIPs))
+	for i := range peer.AllowedIPs {
+		_, ipnet, err := net.ParseCIDR(peer.AllowedIPs[i])
 		if err != nil {
 			return err
 		}
-		defer cl.Close()
+		aips[i] = *ipnet
+	}
 
-		k, err := wgtypes.ParseKey(peer.PublicKey)
-		if err != nil {
-			return err
-		}
-
-		aips := make([]net.IPNet, len(peer.AllowedIPs))
-		for i := range peer.AllowedIPs {
-			_, ipnet, err := net.ParseCIDR(peer.AllowedIPs[i])
-			if err != nil {
-				return err
-			}
-			aips[i] = *ipnet
-		}
-
-		interval := time.Second * 25
-		cfg := wgtypes.Config{
-			ReplacePeers: false,
-			Peers: []wgtypes.PeerConfig{
-				{
-					PublicKey:                   k,
-					AllowedIPs:                  aips,
-					PersistentKeepaliveInterval: &interval,
-				},
+	interval := time.Second * 25
+	cfg := wgtypes.Config{
+		ReplacePeers: false,
+		Peers: []wgtypes.PeerConfig{
+			{
+				PublicKey:                   k,
+				AllowedIPs:                  aips,
+				PersistentKeepaliveInterval: &interval,
 			},
-		}
+		},
+	}
 
-		return cl.ConfigureDevice(m.wgIface, cfg)
-	})
+	return cl.ConfigureDevice(m.wgIface, cfg)
+	// })
 }
 
 func (m *Mgr) removePeer(pub string) error {
-	netNS, err := namespace.GetByName(m.nsName)
+	// netNS, err := namespace.GetByName(m.nsName)
+	// if err != nil {
+	// 	return err
+	// }
+	// defer netNS.Close()
+
+	// return netNS.Do(func(_ ns.NetNS) error {
+	cl, err := wgctrl.New()
 	if err != nil {
 		return err
 	}
-	defer netNS.Close()
+	defer cl.Close()
 
-	return netNS.Do(func(_ ns.NetNS) error {
-		cl, err := wgctrl.New()
-		if err != nil {
-			return err
-		}
-		defer cl.Close()
+	k, err := wgtypes.ParseKey(pub)
+	if err != nil {
+		return err
+	}
 
-		k, err := wgtypes.ParseKey(pub)
-		if err != nil {
-			return err
-		}
-
-		cfg := wgtypes.Config{
-			ReplacePeers: false,
-			Peers: []wgtypes.PeerConfig{
-				{
-					UpdateOnly: true,
-					Remove:     true,
-					PublicKey:  k,
-				},
+	cfg := wgtypes.Config{
+		ReplacePeers: false,
+		Peers: []wgtypes.PeerConfig{
+			{
+				UpdateOnly: true,
+				Remove:     true,
+				PublicKey:  k,
 			},
-		}
+		},
+	}
 
-		return cl.ConfigureDevice(m.wgIface, cfg)
-	})
+	return cl.ConfigureDevice(m.wgIface, cfg)
+	// })
 }
