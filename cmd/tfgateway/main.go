@@ -181,7 +181,15 @@ func run(c *cli.Context) error {
 		}()
 	}
 
-	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dns.New(pool), wgMgr)
+	dnsMgr := dns.New(pool, kp.Identity())
+	for _, domain := range gw.ManagedDomains {
+		log.Info().Msgf("gateway will manage domain %s", domain)
+		if err := dnsMgr.AddDomainDelagate(kp.Identity(), domain); err != nil {
+			return fmt.Errorf("fail to manage domain %s", domain)
+		}
+	}
+
+	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dnsMgr, wgMgr)
 
 	engine := provision.New(provision.EngineOps{
 		NodeID: kp.Identity(),
