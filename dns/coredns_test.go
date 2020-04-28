@@ -22,22 +22,22 @@ func Test_splitDomain(t *testing.T) {
 		{
 			domain: "domain.com",
 			name:   "",
-			zone:   "domain.com.",
+			zone:   "domain.com",
 		},
 		{
 			domain: "a.domain.com",
 			name:   "a",
-			zone:   "domain.com.",
+			zone:   "domain.com",
 		},
 		{
 			domain: "a.b.c.domain.com",
 			name:   "a",
-			zone:   "b.c.domain.com.",
+			zone:   "b.c.domain.com",
 		},
 		{
 			domain: "bleh.grid.deboeck.xyz",
 			name:   "bleh",
-			zone:   "grid.deboeck.xyz.",
+			zone:   "grid.deboeck.xyz",
 		},
 	}
 	for _, tt := range tests {
@@ -150,6 +150,13 @@ func TestZoneRecords(t *testing.T) {
 	result, err := mgr.getZoneRecords(zone, name)
 	require.NoError(t, err)
 	assert.Equal(t, zo, result, "getZoneRecords should return the same value that was set")
+
+	output := s.HGet(zone+".", name)
+	z := Zone{Records: records{}}
+
+	err = json.Unmarshal([]byte(output), &z.Records)
+	require.NoError(t, err)
+	assert.Equal(t, zo, z)
 }
 
 func TestDomainDelegate(t *testing.T) {
@@ -212,4 +219,8 @@ func TestSubdomain(t *testing.T) {
 
 	err = mgr.RemoveSubdomain(user, domain, ips)
 	require.NoError(t, err)
+
+	err = mgr.AddSubdomain(user, "sub.thisisnotdelegated.com", ips)
+	assert.Error(t, err)
+	assert.Equal(t, "thisisnotdelegated.com is not managed by the gateway. Delegate the domain first", err.Error())
 }

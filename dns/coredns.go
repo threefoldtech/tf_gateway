@@ -61,6 +61,10 @@ func (c *Mgr) getZoneRecords(zone, name string) (Zone, error) {
 	con := c.redis.Get()
 	defer con.Close()
 
+	if zone[len(zone)-1] != '.' {
+		zone += "."
+	}
+
 	zr := Zone{Records: records{}}
 	data, err := redis.Bytes(con.Do("HGET", zone, name))
 	if err != nil {
@@ -81,6 +85,10 @@ func (c *Mgr) setZoneRecords(zone, name string, zr Zone) (err error) {
 	log.Debug().Msgf("zet zone records %+v", zr)
 	con := c.redis.Get()
 	defer con.Close()
+
+	if zone[len(zone)-1] != '.' {
+		zone += "."
+	}
 
 	b, err := json.Marshal(zr.Records)
 	if err != nil {
@@ -210,9 +218,9 @@ func (c *Mgr) RemoveDomainDelagate(user string, domain string) error {
 func splitDomain(d string) (name, domain string) {
 	ss := strings.Split(d, ".")
 	if len(ss) < 3 {
-		return "", d + "."
+		return "", d
 	}
-	return ss[0], strings.Join(ss[1:], ".") + "."
+	return ss[0], strings.Join(ss[1:], ".")
 }
 
 func recordFromIP(ip net.IP) (r Record) {

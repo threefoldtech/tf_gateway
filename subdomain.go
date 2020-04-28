@@ -32,7 +32,7 @@ func (p *Provisioner) subDomainDecomission(ctx context.Context, r *provision.Res
 	if err := json.Unmarshal(r.Data, &data); err != nil {
 		return err
 	}
-	log.Info().Str("id", r.ID).Msgf("provision Sudbomain %+v", data)
+	log.Info().Str("id", r.ID).Msgf("decomission Sudbomain %+v", data)
 
 	return p.dns.RemoveSubdomain(r.User, data.Domain, data.IPs)
 }
