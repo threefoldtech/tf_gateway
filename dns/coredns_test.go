@@ -7,6 +7,8 @@ import (
 	"net"
 	"testing"
 
+	"github.com/threefoldtech/zos/pkg/identity"
+
 	"github.com/alicebob/miniredis/v2"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
@@ -100,7 +102,7 @@ func TestZoneOwner(t *testing.T) {
 	pool, err := redis.NewPool(fmt.Sprintf("tcp://%s", s.Addr()))
 	require.NoError(t, err)
 
-	mgr := New(pool)
+	mgr := New(pool, "")
 
 	zone := "mydomain.com"
 	zo := ZoneOwner{Owner: "user1"}
@@ -124,7 +126,7 @@ func TestZoneRecords(t *testing.T) {
 	pool, err := redis.NewPool(fmt.Sprintf("tcp://%s", s.Addr()))
 	require.NoError(t, err)
 
-	mgr := New(pool)
+	mgr := New(pool, "")
 
 	zone := "mydomain.com"
 	name := "test"
@@ -160,7 +162,7 @@ func TestDomainDelegate(t *testing.T) {
 	pool, err := redis.NewPool(fmt.Sprintf("tcp://%s", s.Addr()))
 	require.NoError(t, err)
 
-	mgr := New(pool)
+	mgr := New(pool, "")
 
 	user := "user"
 	domain := "my.domain.com"
@@ -187,10 +189,10 @@ func TestSubdomain(t *testing.T) {
 
 	pool, err := redis.NewPool(fmt.Sprintf("tcp://%s", s.Addr()))
 	require.NoError(t, err)
-	mgr := New(pool)
+	mgr := New(pool, "")
 
 	user := "user"
-	zone := "test.mydomain.com"
+	zone := "mydomain.com"
 	domain := fmt.Sprintf("test.%s", zone)
 	ips := []net.IP{
 		net.ParseIP("10.1.1.10"),
@@ -211,5 +213,41 @@ func TestSubdomain(t *testing.T) {
 	assert.True(t, errors.Is(err, ErrAuth))
 
 	err = mgr.RemoveSubdomain(user, domain, ips)
+	require.NoError(t, err)
+}
+
+func TestManagedDomain(t *testing.T) {
+	s, err := miniredis.Run()
+	require.NoError(t, err)
+	defer s.Close()
+
+	kp, err := identity.GenerateKeyPair()
+	require.NoError(t, err)
+
+	pool, err := redis.NewPool(fmt.Sprintf("tcp://%s", s.Addr()))
+	require.NoError(t, err)
+	mgr := New(pool, kp.Identity())
+
+	zone := "managed-domain.com"
+	ips := []net.IP{
+		net.ParseIP("10.1.1.10"),
+	}
+
+	// add the managed domain by the gateway
+	err = mgr.AddDomainDelagate(kp.Identity(), zone)
+	require.NoError(t, err)
+
+	// random user add a subomain on the managed domain
+	err = mgr.AddSubdomain("user1", fmt.Sprintf("user1.%s", zone), ips)
+	require.NoError(t, err)
+
+	// random user add a subomain on the managed domain
+	err = mgr.AddSubdomain("user2", fmt.Sprintf("user2.%s", zone), ips)
+	require.NoError(t, err)
+
+	err = mgr.AddSubdomain("user2", fmt.Sprintf("user1.%s", zone), ips)
+	require.Error(t, err, "a user cannot overwrite the domain of someone else")
+
+	err = mgr.RemoveSubdomain("user2", fmt.Sprintf("user2.%s", zone), ips)
 	require.NoError(t, err)
 }

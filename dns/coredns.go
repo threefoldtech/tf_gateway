@@ -14,13 +14,15 @@ import (
 
 // Mgr is responsible to configure CoreDNS trough its redis pluging
 type Mgr struct {
-	redis *redis.Pool
+	redis    *redis.Pool
+	identity string
 }
 
 // New creates a DNS manager
-func New(pool *redis.Pool) *Mgr {
+func New(pool *redis.Pool, identity string) *Mgr {
 	return &Mgr{
-		redis: pool,
+		redis:    pool,
+		identity: identity,
 	}
 }
 
@@ -114,13 +116,18 @@ func (c *Mgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
 		return fmt.Errorf("%s is not managed by the gateway. Delegate the domain first", zone)
 	}
 
-	if owner.Owner != user {
+	if owner.Owner != c.identity && owner.Owner != user {
 		return fmt.Errorf("%w cannot add subdomain %s to zone %s", ErrAuth, name, zone)
 	}
 
 	zr, err := c.getZoneRecords(zone, name)
 	if err != nil {
 		return err
+	}
+
+	// if this is a managed domain and there is already some records, then refuse to modify it
+	if owner.Owner == c.identity && len(zr.Records) > 0 {
+		return fmt.Errorf("the sub-domain %s is already used by someone else: %w", domain, ErrAuth)
 	}
 
 	for _, ip := range IPs {
@@ -144,13 +151,13 @@ func (c *Mgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
 	}
 
 	if owner.Owner == "" {
-		// domain not managed by this gatewat at all, so all subdomain are already gone too.
+		// domain not managed by this gateway at all, so all subdomain are already gone too.
 		// this can happen when a delegated domain expires before a subdomain
 		return nil
 	}
 
-	if owner.Owner != user {
-		return fmt.Errorf("%w cannot add subdomain %s to zone %s", ErrAuth, name, zone)
+	if owner.Owner != c.identity && owner.Owner != user {
+		return fmt.Errorf("%w cannot remove subdomain %s from zone %s", ErrAuth, name, zone)
 	}
 
 	zr, err := c.getZoneRecords(zone, name)
