@@ -3,6 +3,7 @@ module github.com/threefoldtech/tfgateway
 go 1.14
 
 require (
+	github.com/alicebob/miniredis/v2 v2.11.4
 	github.com/cenkalti/backoff/v3 v3.0.0
 	github.com/containernetworking/plugins v0.8.4
 	github.com/gomodule/redigo v2.0.0+incompatible

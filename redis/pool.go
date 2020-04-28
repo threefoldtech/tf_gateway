@@ -1,14 +1,17 @@
-package main
+package redis
 
 import (
 	"fmt"
 	"net/url"
 	"time"
 
-	"github.com/gomodule/redigo/redis"
+	redigo "github.com/gomodule/redigo/redis"
 )
 
-func newRedisPool(address string) (*redis.Pool, error) {
+// NewPool creates a redis pool by connecting to address
+// address format must contains the scheme to use
+// tcp://host:port or unix:///path/to/socket
+func NewPool(address string) (*redigo.Pool, error) {
 	u, err := url.Parse(address)
 	if err != nil {
 		return nil, err
@@ -22,20 +25,20 @@ func newRedisPool(address string) (*redis.Pool, error) {
 	default:
 		return nil, fmt.Errorf("unknown scheme '%s' expecting tcp or unix", u.Scheme)
 	}
-	var opts []redis.DialOption
+	var opts []redigo.DialOption
 
 	if u.User != nil {
 		opts = append(
 			opts,
-			redis.DialPassword(u.User.Username()),
+			redigo.DialPassword(u.User.Username()),
 		)
 	}
 
-	return &redis.Pool{
-		Dial: func() (redis.Conn, error) {
-			return redis.Dial(u.Scheme, host, opts...)
+	return &redigo.Pool{
+		Dial: func() (redigo.Conn, error) {
+			return redigo.Dial(u.Scheme, host, opts...)
 		},
-		TestOnBorrow: func(c redis.Conn, t time.Time) error {
+		TestOnBorrow: func(c redigo.Conn, t time.Time) error {
 			if time.Since(t) > 10*time.Second {
 				//only check connection if more than 10 second of inactivity
 				_, err := c.Do("PING")
