@@ -15,6 +15,7 @@ import (
 	"github.com/threefoldtech/tfgateway/cache"
 	"github.com/threefoldtech/tfgateway/dns"
 	"github.com/threefoldtech/tfgateway/proxy"
+	"github.com/threefoldtech/tfgateway/redis"
 	"github.com/threefoldtech/tfgateway/wg"
 	"github.com/threefoldtech/zos/pkg/app"
 	"github.com/threefoldtech/zos/pkg/crypto"
@@ -101,7 +102,7 @@ func main() {
 }
 
 func run(c *cli.Context) error {
-	pool, err := newRedisPool(c.String("redis"))
+	pool, err := redis.NewPool(c.String("redis"))
 	if err != nil {
 		return fmt.Errorf("failed to connec to redis configuration server: %w", err)
 	}

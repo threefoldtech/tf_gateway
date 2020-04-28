@@ -203,7 +203,7 @@ func (c *Mgr) RemoveDomainDelagate(user string, domain string) error {
 		return err
 	}
 	// remove all eventual subdomain configuration for this delegated domain
-	_, err = con.Do("HDEL", domain)
+	_, err = con.Do("DEL", domain)
 	return err
 }
 
