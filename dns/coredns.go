@@ -104,6 +104,43 @@ func (c *Mgr) setZoneRecords(zone, name string, zr Zone) (err error) {
 	return nil
 }
 
+func (c *Mgr) setSubdomainOwner(domain, user string) error {
+	log.Debug().Msgf("set managed domain owner %s %s", domain, user)
+	con := c.redis.Get()
+	defer con.Close()
+
+	if _, err := con.Do("HSET", "managed_domains", domain, user); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (c *Mgr) getSubdomainOwner(domain string) (user string, err error) {
+	log.Debug().Msgf("get managed domain owner %s %s", domain, user)
+	con := c.redis.Get()
+	defer con.Close()
+
+	user, err = redis.String(con.Do("HGET", "managed_domains", domain))
+	if err != nil {
+		if errors.Is(err, redis.ErrNil) {
+			return "", nil
+		}
+		return "", err
+	}
+
+	return user, nil
+}
+
+func (c *Mgr) deleteSubdomainOwner(domain string) error {
+	log.Debug().Msgf("delete managed domain owner %s", domain)
+	con := c.redis.Get()
+	defer con.Close()
+
+	_, err := con.Do("HDEL", "managed_domains", domain)
+	return err
+}
+
 // AddSubdomain configures a domain A or AAA records depending on the version of
 // the IP address in IPs
 func (c *Mgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
@@ -124,7 +161,15 @@ func (c *Mgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
 		return fmt.Errorf("%s is not managed by the gateway. Delegate the domain first", zone)
 	}
 
-	if owner.Owner != c.identity && owner.Owner != user {
+	if owner.Owner == c.identity { // this is a manged domain
+		owner, err := c.getSubdomainOwner(domain)
+		if err != nil {
+			return err
+		}
+		if owner != "" && owner != user {
+			return fmt.Errorf("%w cannot add subdomain %s to zone %s", ErrAuth, name, zone)
+		}
+	} else if owner.Owner != user { //this is a deletegatedDomain
 		return fmt.Errorf("%w cannot add subdomain %s to zone %s", ErrAuth, name, zone)
 	}
 
@@ -133,17 +178,19 @@ func (c *Mgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
 		return err
 	}
 
-	// if this is a managed domain and there is already some records, then refuse to modify it
-	if owner.Owner == c.identity && len(zr.Records) > 0 {
-		return fmt.Errorf("the sub-domain %s is already used by someone else: %w", domain, ErrAuth)
-	}
-
 	for _, ip := range IPs {
 		r := recordFromIP(ip)
 		zr.Add(r)
 	}
 
-	return c.setZoneRecords(zone, name, zr)
+	if err := c.setZoneRecords(zone, name, zr); err != nil {
+		return err
+	}
+
+	if owner.Owner == c.identity {
+		return c.setSubdomainOwner(domain, user)
+	}
+	return nil
 }
 
 // RemoveSubdomain remove a domain added with AddSubdomain
@@ -164,7 +211,15 @@ func (c *Mgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
 		return nil
 	}
 
-	if owner.Owner != c.identity && owner.Owner != user {
+	if owner.Owner == c.identity { // this is a manged domain
+		owner, err := c.getSubdomainOwner(domain)
+		if err != nil {
+			return err
+		}
+		if owner != "" && owner != user {
+			return fmt.Errorf("%w cannot remove subdomain %s from zone %s", ErrAuth, name, zone)
+		}
+	} else if owner.Owner != user { //this is a deletegatedDomain
 		return fmt.Errorf("%w cannot remove subdomain %s from zone %s", ErrAuth, name, zone)
 	}
 
@@ -182,7 +237,15 @@ func (c *Mgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
 		zr.Remove(r)
 	}
 
-	return c.setZoneRecords(zone, name, zr)
+	if err := c.setZoneRecords(zone, name, zr); err != nil {
+		return err
+	}
+
+	if owner.Owner == c.identity && len(zr.Records) == 0 {
+		// if the subomain has been cleared out, we remove the owner so anyone can claim it again
+		return c.deleteSubdomainOwner(domain)
+	}
+	return nil
 }
 
 // AddDomainDelagate configures coreDNS to manage domain
