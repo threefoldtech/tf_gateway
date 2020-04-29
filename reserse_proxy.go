@@ -2,6 +2,8 @@ package tfgateway
 
 import (
 	"context"
+	"fmt"
+	"strings"
 
 	"github.com/threefoldtech/zos/pkg/provision"
 
@@ -16,12 +18,32 @@ type ReverseProxy struct {
 	Secret string `json:"secret"`
 }
 
+func (r ReverseProxy) validate(user string) error {
+	if r.Domain == "" {
+		return fmt.Errorf("domain cannot be empty")
+	}
+
+	if r.Secret == "" {
+		return fmt.Errorf("secret cannot be empty")
+	}
+
+	if !strings.HasPrefix(r.Secret, fmt.Sprintf("%s:", user)) {
+		return fmt.Errorf("secret must follow the format 'threebotID:random'")
+	}
+
+	return nil
+}
+
 func (p *Provisioner) reverseProxyProvision(ctx context.Context, r *provision.Reservation) (interface{}, error) {
 	data := ReverseProxy{}
 	if err := json.Unmarshal(r.Data, &data); err != nil {
 		return nil, err
 	}
 	log.Info().Str("id", r.ID).Msgf("provision proxy %+v", data)
+
+	if err := data.validate(r.User); err != nil {
+		return nil, err
+	}
 
 	return nil, p.proxy.AddReverseProxy(r.User, data.Domain, data.Secret)
 }
