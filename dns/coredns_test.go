@@ -250,4 +250,8 @@ func TestManagedDomain(t *testing.T) {
 
 	err = mgr.RemoveSubdomain("user2", fmt.Sprintf("user2.%s", zone), ips)
 	require.NoError(t, err)
+
+	ips = append(ips, net.ParseIP("2a02:2788:864:1314:9eb6:d0ff:fe97:764b"))
+	err = mgr.AddSubdomain("user1", fmt.Sprintf("user1.%s", zone), ips)
+	assert.NoError(t, err, "a user can modify the records of its subomain on a manged domain")
 }
