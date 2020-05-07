@@ -13,6 +13,14 @@ func TestZone(t *testing.T) {
 		IP4: "10.0.0.1",
 		TTL: 3600,
 	}
+	b := RecordA{
+		IP4: "10.0.0.2",
+		TTL: 3600,
+	}
+	c := RecordA{
+		IP4: "10.0.0.3",
+		TTL: 3600,
+	}
 	aaaa := RecordAAAA{
 		IP6: "fdb5:7faa:7be7:3ef3::1",
 		TTL: 3600,
@@ -34,4 +42,11 @@ func TestZone(t *testing.T) {
 	// remove no existing also works
 	z.Remove(aaaa)
 	assert.Equal(t, 0, len(z.Records[RecordTypeAAAA]))
+
+	// add 2 more and remove one in the middle
+	z.Add(b)
+	z.Add(c)
+	assert.Equal(t, 3, len(z.Records[RecordTypeA]))
+	z.Remove(b)
+	assert.Equal(t, 2, len(z.Records[RecordTypeA]))
 }
