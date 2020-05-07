@@ -70,16 +70,18 @@ func (z *Zone) Remove(r Record) {
 		z.Records = records{}
 	}
 
-	_, ok := z.Records[r.Type()]
+	records, ok := z.Records[r.Type()]
 	if !ok {
 		return
 	}
 
-	for i := range z.Records[r.Type()] {
-		if z.Records[r.Type()][i] == r {
-			z.Records[r.Type()] = append(z.Records[r.Type()][:i], z.Records[r.Type()][i+1:]...)
+	newrecords := records[:0]
+	for _, record := range records {
+		if record != r {
+			newrecords = append(newrecords, record)
 		}
 	}
+	z.Records[r.Type()] = newrecords
 }
 
 type records map[RecordType][]Record
