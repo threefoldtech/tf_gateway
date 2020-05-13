@@ -1,16 +1,20 @@
 package tfgateway
 
 import (
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"net"
 	"time"
+
+	"github.com/threefoldtech/zos/pkg/crypto"
 
 	"github.com/threefoldtech/tfexplorer/models/generated/workloads"
 	"github.com/threefoldtech/tfexplorer/schema"
 	"github.com/threefoldtech/tfgateway/dns"
 	"github.com/threefoldtech/tfgateway/proxy"
 	"github.com/threefoldtech/tfgateway/wg"
+	"github.com/threefoldtech/zos/pkg/identity"
 	"github.com/threefoldtech/zos/pkg/provision"
 )
 
@@ -36,6 +40,8 @@ var ProvisionOrder = map[provision.ReservationType]int{
 // Provisioner hold all the logic responsible to provision and decomission
 // the different primitives workloads defined by this package
 type Provisioner struct {
+	kp identity.KeyPair
+
 	proxy *proxy.Mgr
 	dns   *dns.Mgr
 	wg    *wg.Mgr
@@ -45,8 +51,9 @@ type Provisioner struct {
 }
 
 // NewProvisioner creates a new 0-OS provisioner
-func NewProvisioner(proxy *proxy.Mgr, dns *dns.Mgr, wg *wg.Mgr) *Provisioner {
+func NewProvisioner(proxy *proxy.Mgr, dns *dns.Mgr, wg *wg.Mgr, kp identity.KeyPair) *Provisioner {
 	p := &Provisioner{
+		kp:    kp,
 		proxy: proxy,
 		dns:   dns,
 		wg:    wg,
@@ -70,6 +77,21 @@ func NewProvisioner(proxy *proxy.Mgr, dns *dns.Mgr, wg *wg.Mgr) *Provisioner {
 	}
 
 	return p
+}
+
+func (p *Provisioner) decrypt(msg string) (string, error) {
+	if len(msg) == 0 {
+		return "", nil
+	}
+
+	bytes, err := hex.DecodeString(msg)
+	if err != nil {
+		return "", err
+	}
+
+	out, err := crypto.Decrypt(bytes, p.kp.PrivateKey)
+	return string(out), err
+
 }
 
 func proxyConverter(w workloads.GatewayProxy) (Proxy, string, error) {
