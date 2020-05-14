@@ -12,8 +12,8 @@ require (
 	github.com/rs/zerolog v1.18.0
 	github.com/shirou/gopsutil v2.19.11+incompatible
 	github.com/stretchr/testify v1.5.1
-	github.com/threefoldtech/tfexplorer v0.2.6
-	github.com/threefoldtech/zos v0.2.6
+	github.com/threefoldtech/tfexplorer v0.3.0
+	github.com/threefoldtech/zos v0.3.1
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/vishvananda/netlink v1.0.0
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20191219145116-fa6499c8e75f

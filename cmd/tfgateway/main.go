@@ -79,6 +79,10 @@ var appCLI = cli.App{
 			Usage: "name of the wireguard interface created for the 4to6 tunnel primitive",
 			Value: "wg-tfgateway",
 		},
+		&cli.BoolFlag{
+			Name:  "free",
+			Usage: "if specified, the gateway will be marked as free to use and capacity can be reserved using FreeTFT",
+		},
 	},
 	Before: func(c *cli.Context) error {
 		app.Initialize()
@@ -143,6 +147,7 @@ func run(c *cli.Context) error {
 		ManagedDomains: c.StringSlice("domains"),
 		DnsNameserver:  c.StringSlice("nameservers"),
 		TcpRouterPort:  c.Int64("tcp-client-port"),
+		FreeToUse:      c.Bool("free"),
 	}
 
 	bo := backoff.NewExponentialBackOff()

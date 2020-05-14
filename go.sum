@@ -514,6 +514,9 @@ github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae/go.mod h1:quDq6Se
 github.com/threefoldtech/tfexplorer v0.2.5/go.mod h1:TugylEDgMNKk4ZIzee9PpVmIcLNLaRLdiXuhHTt/AR0=
 github.com/threefoldtech/tfexplorer v0.2.6 h1:Jk8qA5dMVMX9YWZ8IC7zkXiOxClGy2M//OVPmwWe4Cc=
 github.com/threefoldtech/tfexplorer v0.2.6/go.mod h1:ozAe2OYR4ALp2PtyKT1A6UiTI+0ZcFU2UfUaRd1P5eE=
+github.com/threefoldtech/tfexplorer v0.2.7-0.20200506105748-dd92c058d776/go.mod h1:ozAe2OYR4ALp2PtyKT1A6UiTI+0ZcFU2UfUaRd1P5eE=
+github.com/threefoldtech/tfexplorer v0.3.0 h1:vVFFMG5Zx8QWN23h9gB2sI9zYOH9/gt+RI90Au2l5M0=
+github.com/threefoldtech/tfexplorer v0.3.0/go.mod h1:ozAe2OYR4ALp2PtyKT1A6UiTI+0ZcFU2UfUaRd1P5eE=
 github.com/threefoldtech/zbus v0.1.3 h1:18DnIzximRbATle5ZdZz0i84n/bCYB8k/gkhr2dXayc=
 github.com/threefoldtech/zbus v0.1.3/go.mod h1:ZtiRpcqzEBJetVQDsEbw0p48h/AF3O1kf0tvd30I0BU=
 github.com/threefoldtech/zos v0.2.4-rc2/go.mod h1:7A2oflcmSVsHFC4slOcydWgJyFBMFMH9wsaTRv+CnTA=
@@ -521,6 +524,8 @@ github.com/threefoldtech/zos v0.2.4 h1:W9QhzJqU+dwxLOa/AH4uXnTPtYhcMaNHTCw888yvS
 github.com/threefoldtech/zos v0.2.4/go.mod h1:B1SeNF7YWpDEUFX4dgAXImHO49HB5zDuD+q3YRY5xvA=
 github.com/threefoldtech/zos v0.2.6 h1:q9X/BdS/p7W1hdIRk91EiuS+UNw/UcIRMJCQ8nfD2cw=
 github.com/threefoldtech/zos v0.2.6/go.mod h1:mscOMCCObcg00pR8U1D6IfYcSUNmMS1IpxK4g6l1D8w=
+github.com/threefoldtech/zos v0.3.1 h1:Dyo+D2YSdeN24YeauFbWwOYXEdu7swhLU1k7KVoI8Kk=
+github.com/threefoldtech/zos v0.3.1/go.mod h1:Vyc8ONYQ558XabKokJGidFFGHIW6vZey4ZpM2MhpM2c=
 github.com/tidwall/pretty v1.0.0 h1:HsD+QiTn7sK6flMKIvNmpqz1qrpP3Ps6jOKIKMooyg4=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tyler-smith/go-bip39 v0.0.0-20180618194314-52158e4697b8/go.mod h1:sJ5fKU0s6JVwZjjcUEX2zFOnvq0ASQ2K9Zr6cf67kNs=
