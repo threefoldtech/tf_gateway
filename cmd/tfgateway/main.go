@@ -57,6 +57,10 @@ var appCLI = cli.App{
 			Name:  "debug",
 			Usage: "enable debug logging",
 		},
+		&cli.Int64Flag{
+			Name:  "farm",
+			Usage: "The farm ID of the tfgateway",
+		},
 		&cli.StringSliceFlag{
 			Name:  "nameservers",
 			Usage: "list of DNS nameserver used by this TFGateway. User use this value to know where to point there NS record in order to delegate domain to the TFGateway",
@@ -135,6 +139,7 @@ func run(c *cli.Context) error {
 
 	gw := directory.Gateway{
 		NodeId:       kp.Identity(),
+		FarmId:       c.Int64("farm"),
 		PublicKeyHex: hex.EncodeToString(kp.PublicKey),
 		OsVersion:    version.Current().Short(),
 		Location: directory.Location{
