@@ -103,7 +103,7 @@ func proxyConverter(w workloads.GatewayProxy) (Proxy, string, error) {
 	}, w.NodeId, nil
 }
 
-func reserveproxyConverter(w workloads.GatewayReserveProxy) (ReverseProxy, string, error) {
+func reserveproxyConverter(w workloads.GatewayReverseProxy) (ReverseProxy, string, error) {
 	return ReverseProxy{
 		Domain: w.Domain,
 		Secret: w.Secret,
@@ -158,7 +158,7 @@ func WorkloadToProvisionType(w workloads.ReservationWorkload) (*provision.Reserv
 		if err != nil {
 			return nil, err
 		}
-	case workloads.GatewayReserveProxy:
+	case workloads.GatewayReverseProxy:
 		data, reservation.NodeID, err = reserveproxyConverter(tmp)
 		if err != nil {
 			return nil, err
