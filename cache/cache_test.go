@@ -1,6 +1,7 @@
 package cache
 
 import (
+	"encoding/json"
 	"fmt"
 	"testing"
 	"time"
@@ -39,6 +40,9 @@ func TestLocalStore(t *testing.T) {
 					Created:  time.Now().UTC().Add(-time.Minute).Round(time.Second),
 					Duration: time.Second * 10,
 					Tag:      provision.Tag{"source": "tfgateway_cache"},
+					Result: provision.Result{
+						Data: json.RawMessage([]byte(`""`)),
+					},
 				},
 			},
 		},

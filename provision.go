@@ -3,9 +3,10 @@ package tfgateway
 import (
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
+	"math"
 	"net"
-	"time"
 
 	"github.com/threefoldtech/zos/pkg/crypto"
 
@@ -17,6 +18,10 @@ import (
 	"github.com/threefoldtech/zos/pkg/identity"
 	"github.com/threefoldtech/zos/pkg/provision"
 )
+
+// ErrUnsupportedWorkload is return when a workload of a type not supported by
+// provisiond is received from the explorer
+var ErrUnsupportedWorkload = errors.New("workload type not supported")
 
 // ReservationType enum list all the supported primitives but the tfgateway
 var (
@@ -94,57 +99,89 @@ func (p *Provisioner) decrypt(msg string) (string, error) {
 
 }
 
-func proxyConverter(w workloads.GatewayProxy) (Proxy, string, error) {
+func proxyConverter(w workloads.Workloader) (Proxy, string, error) {
+	p, ok := w.(*workloads.GatewayProxy)
+	if !ok {
+		return Proxy{}, "", fmt.Errorf("failed to convert proxy workload, wrong format")
+	}
 	return Proxy{
-		Domain:  w.Domain,
-		Addr:    w.Addr,
-		Port:    w.Port,
-		PortTLS: w.PortTLS,
-	}, w.NodeId, nil
+		Domain:  p.Domain,
+		Addr:    p.Addr,
+		Port:    p.Port,
+		PortTLS: p.PortTLS,
+	}, p.NodeId, nil
 }
 
-func reserveproxyConverter(w workloads.GatewayReverseProxy) (ReverseProxy, string, error) {
+func reserveproxyConverter(w workloads.Workloader) (ReverseProxy, string, error) {
+	p, ok := w.(*workloads.GatewayReverseProxy)
+	if !ok {
+		return ReverseProxy{}, "", fmt.Errorf("failed to convert reverse proxy workload, wrong format")
+	}
+
 	return ReverseProxy{
-		Domain: w.Domain,
-		Secret: w.Secret,
-	}, w.NodeId, nil
+		Domain: p.Domain,
+		Secret: p.Secret,
+	}, p.NodeId, nil
 }
 
-func subdomainConverter(w workloads.GatewaySubdomain) (Subdomain, string, error) {
-	s := Subdomain{
-		Domain: w.Domain,
-		IPs:    make([]net.IP, len(w.IPs)),
-	}
-	for i := range w.IPs {
-		s.IPs[i] = net.ParseIP(w.IPs[i])
+func subdomainConverter(w workloads.Workloader) (Subdomain, string, error) {
+	s, ok := w.(*workloads.GatewaySubdomain)
+	if !ok {
+		return Subdomain{}, "", fmt.Errorf("failed to convert subdomain workload, wrong format")
 	}
 
-	return s, w.NodeId, nil
+	subdomain := Subdomain{
+		Domain: s.Domain,
+		IPs:    make([]net.IP, len(s.IPs)),
+	}
+	for i := range s.IPs {
+		subdomain.IPs[i] = net.ParseIP(s.IPs[i])
+	}
+
+	return subdomain, s.NodeId, nil
 }
 
-func delegateConverter(w workloads.GatewayDelegate) (Delegate, string, error) {
+func delegateConverter(w workloads.Workloader) (Delegate, string, error) {
+	d, ok := w.(*workloads.GatewayDelegate)
+	if !ok {
+		return Delegate{}, "", fmt.Errorf("failed to convert delegate domain workload, wrong format")
+	}
+
 	return Delegate{
-		Domain: w.Domain,
-	}, w.NodeId, nil
+		Domain: d.Domain,
+	}, d.NodeId, nil
 }
 
-func gateway4To6Converter(w workloads.Gateway4To6) (Gateway4to6, string, error) {
+func gateway4To6Converter(w workloads.Workloader) (Gateway4to6, string, error) {
+	t, ok := w.(*workloads.Gateway4To6)
+	if !ok {
+		return Gateway4to6{}, "", fmt.Errorf("failed to convert gateway 4to6 workload, wrong format")
+	}
+
 	return Gateway4to6{
-		PublicKey: w.PublicKey,
-	}, w.NodeId, nil
+		PublicKey: t.PublicKey,
+	}, t.NodeId, nil
 }
 
 // WorkloadToProvisionType TfgridReservationWorkload1 to provision.Reservation
-func WorkloadToProvisionType(w workloads.ReservationWorkload) (*provision.Reservation, error) {
+func WorkloadToProvisionType(w workloads.Workloader) (*provision.Reservation, error) {
 
 	reservation := &provision.Reservation{
-		ID:        w.WorkloadId,
-		User:      w.User,
-		Type:      provision.ReservationType(w.Type.String()),
-		Created:   w.Created.Time,
-		Duration:  time.Duration(w.Duration) * time.Second,
-		Signature: []byte(w.Signature),
-		ToDelete:  w.ToDelete,
+		ID:        fmt.Sprintf("%d-%d", w.GetID(), w.WorkloadID()),
+		User:      fmt.Sprintf("%d", w.GetCustomerTid()),
+		Type:      provision.ReservationType(w.GetWorkloadType().String()),
+		Created:   w.GetEpoch().Time,
+		Duration:  math.MaxInt64,
+		Signature: []byte(w.GetCustomerSignature()),
+		ToDelete:  w.GetNextAction() == workloads.NextActionDelete,
+		Reference: w.GetReference(),
+		Result:    resultFromSchemaType(w.GetResult()),
+	}
+
+	// to ensure old reservation workload that are already running
+	// keeps running as it is, we use the reference as new workload ID
+	if reservation.Reference != "" {
+		reservation.ID = reservation.Reference
 	}
 
 	var (
@@ -152,34 +189,34 @@ func WorkloadToProvisionType(w workloads.ReservationWorkload) (*provision.Reserv
 		err  error
 	)
 
-	switch tmp := w.Content.(type) {
-	case workloads.GatewayProxy:
-		data, reservation.NodeID, err = proxyConverter(tmp)
+	switch w.GetWorkloadType() {
+	case workloads.WorkloadTypeProxy:
+		data, reservation.NodeID, err = proxyConverter(w)
 		if err != nil {
 			return nil, err
 		}
-	case workloads.GatewayReverseProxy:
-		data, reservation.NodeID, err = reserveproxyConverter(tmp)
+	case workloads.WorkloadTypeReverseProxy:
+		data, reservation.NodeID, err = reserveproxyConverter(w)
 		if err != nil {
 			return nil, err
 		}
-	case workloads.GatewaySubdomain:
-		data, reservation.NodeID, err = subdomainConverter(tmp)
+	case workloads.WorkloadTypeSubDomain:
+		data, reservation.NodeID, err = subdomainConverter(w)
 		if err != nil {
 			return nil, err
 		}
-	case workloads.GatewayDelegate:
-		data, reservation.NodeID, err = delegateConverter(tmp)
+	case workloads.WorkloadTypeDomainDelegate:
+		data, reservation.NodeID, err = delegateConverter(w)
 		if err != nil {
 			return nil, err
 		}
-	case workloads.Gateway4To6:
-		data, reservation.NodeID, err = gateway4To6Converter(tmp)
+	case workloads.WorkloadTypeGateway4To6:
+		data, reservation.NodeID, err = gateway4To6Converter(w)
 		if err != nil {
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("unknown workload type (%s) (%T)", w.Type.String(), tmp)
+		return nil, fmt.Errorf("%w (%s) (%T)", ErrUnsupportedWorkload, w.GetWorkloadType().String(), w)
 	}
 
 	reservation.Data, err = json.Marshal(data)
@@ -220,4 +257,19 @@ func ResultToSchemaType(r provision.Result) (*workloads.Result, error) {
 	}
 
 	return &result, nil
+}
+
+func resultFromSchemaType(r workloads.Result) provision.Result {
+
+	result := provision.Result{
+		Type:      provision.ReservationType(r.Category.String()),
+		Created:   r.Epoch.Time,
+		Data:      r.DataJson,
+		Error:     r.Message,
+		ID:        r.WorkloadId,
+		State:     provision.ResultState(r.State),
+		Signature: r.Signature,
+	}
+
+	return result
 }
