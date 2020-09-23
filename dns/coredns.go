@@ -241,7 +241,7 @@ func (c *Mgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
 		return err
 	}
 
-	if owner.Owner == c.identity && len(zr.Records) == 0 {
+	if owner.Owner == c.identity && zr.Records.IsEmpty() {
 		// if the subomain has been cleared out, we remove the owner so anyone can claim it again
 		return c.deleteSubdomainOwner(domain)
 	}

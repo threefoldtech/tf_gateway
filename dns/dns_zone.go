@@ -86,6 +86,15 @@ func (z *Zone) Remove(r Record) {
 
 type records map[RecordType][]Record
 
+func (rs records) IsEmpty() bool {
+	for _, records := range rs {
+		if len(records) > 0 {
+			return false
+		}
+	}
+	return true
+}
+
 // UnmarshalJSON implements encoding/json.Unmarshaler interface
 func (rs records) UnmarshalJSON(b []byte) error {
 	if rs == nil {
