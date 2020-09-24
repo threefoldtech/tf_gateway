@@ -26,8 +26,8 @@ require (
 	github.com/rs/zerolog v1.19.0
 	github.com/shirou/gopsutil v2.20.6+incompatible
 	github.com/stretchr/testify v1.6.1
-	github.com/threefoldtech/tfexplorer v0.3.2-0.20200728102800-7d0649f8141c
-	github.com/threefoldtech/zos v0.4.0-rc4
+	github.com/threefoldtech/tfexplorer v0.4.0
+	github.com/threefoldtech/zos v0.4.2
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20200520041808-52d707b772fe // indirect
@@ -36,7 +36,6 @@ require (
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208 // indirect
 	golang.org/x/sys v0.0.0-20200728102440-3e129f6d46b1 // indirect
-	golang.org/x/text v0.3.3 // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20191219145116-fa6499c8e75f
 	google.golang.org/genproto v0.0.0-20200728010541-3dc8dca74b7b // indirect
 	google.golang.org/grpc v1.30.0 // indirect

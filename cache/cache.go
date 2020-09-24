@@ -170,6 +170,12 @@ func (s *Redis) Exists(id string) (bool, error) {
 	return redis.Bool(con.Do("HEXISTS", reservationsKey, id))
 }
 
+// NetworkExists is just there to satisfy the github.com/threefoldtech/zos/pkg/provision.ReservationCache interface
+func (s *Redis) NetworkExists(_ string) (bool, error) {
+	// TODO: modify the ReservationCache interface to remove this method
+	return false, nil
+}
+
 func (s *Redis) get(id string) (*provision.Reservation, error) {
 	con := s.pool.Get()
 	defer con.Close()
