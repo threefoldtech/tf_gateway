@@ -4,7 +4,7 @@ branch = $(shell git symbolic-ref -q --short HEAD || git describe --tags --exact
 revision = $(shell git rev-parse HEAD)
 dirty = $(shell test -n "`git diff --shortstat 2> /dev/null | tail -n1`" && echo "*")
 version = github.com/threefoldtech/zos/pkg/version
-ldflags = '-w -s -X $(version).Branch=$(branch) -X $(version).Revision=$(revision) -X $(version).Dirty=$(dirty)'
+ldflags = '-w -s -X $(version).Branch=$(branch) -X $(version).Revision=$(revision) -X $(version).Dirty=$(dirty) -extldflags "-static"'
 
 all: build
 
@@ -58,4 +58,4 @@ testrace: verifiers build
 	go test -v -vet=off -race ./...
 
 build:
-	cd cmd/tfgateway && go build -ldflags $(ldflags) -o $(OUT)/tfgateway
+	cd cmd/tfgateway && CGO_ENABLED=0 go build -ldflags $(ldflags) -o $(OUT)/tfgateway

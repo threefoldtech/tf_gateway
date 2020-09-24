@@ -81,7 +81,13 @@ func (z *Zone) Remove(r Record) {
 			newrecords = append(newrecords, record)
 		}
 	}
-	z.Records[r.Type()] = newrecords
+	// if there is no more records for a certain type
+	// remove this type from the map completely
+	if len(newrecords) == 0 {
+		delete(z.Records, r.Type())
+	} else {
+		z.Records[r.Type()] = newrecords
+	}
 }
 
 type records map[RecordType][]Record
