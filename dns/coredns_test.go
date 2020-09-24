@@ -227,6 +227,40 @@ func TestSubdomain(t *testing.T) {
 	assert.Equal(t, "thisisnotdelegated.com is not managed by the gateway. Delegate the domain first", err.Error())
 }
 
+func TestSubdomainChangeOwner(t *testing.T) {
+	// https://github.com/threefoldtech/tfexplorer/issues/166
+	s, err := miniredis.Run()
+	require.NoError(t, err)
+	defer s.Close()
+
+	pool, err := redis.NewPool(fmt.Sprintf("tcp://%s", s.Addr()))
+	require.NoError(t, err)
+
+	gwid := "gwid"
+	mgr := New(pool, gwid)
+
+	domain := "foo.mydomain.com"
+	subdomain := fmt.Sprintf("test.%s", domain)
+	ips := []net.IP{
+		net.ParseIP("10.1.1.10"),
+	}
+
+	// the gateway manage a domain
+	err = mgr.AddDomainDelagate(gwid, domain)
+	require.NoError(t, err)
+
+	// a user create a subdomain
+	err = mgr.AddSubdomain("user", subdomain, ips)
+	require.NoError(t, err)
+
+	// free up the domain, anyone else should be able to use now
+	err = mgr.RemoveSubdomain("user", subdomain, ips)
+	require.NoError(t, err)
+
+	err = mgr.AddSubdomain("user2", subdomain, ips)
+	assert.NoError(t, err, "anyone should be able to use the domain again")
+}
+
 func TestManagedDomain(t *testing.T) {
 	s, err := miniredis.Run()
 	require.NoError(t, err)
