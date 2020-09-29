@@ -228,7 +228,7 @@ func (c *Mgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
 		return err
 	}
 
-	if len(zr.Records) == 0 {
+	if zr.Records.IsEmpty() {
 		return nil
 	}
 

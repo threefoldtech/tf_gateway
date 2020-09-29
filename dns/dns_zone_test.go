@@ -35,9 +35,9 @@ func TestZone(t *testing.T) {
 	assert.Equal(t, []Record{aaaa}, z.Records[RecordTypeAAAA])
 
 	z.Remove(aaaa)
-	assert.Equal(t, 0, len(z.Records[RecordTypeAAAA]))
+	_, exists := z.Records[RecordTypeAAAA]
+	assert.False(t, exists)
 	assert.Equal(t, []Record{a}, z.Records[RecordTypeA])
-	assert.Equal(t, []Record{}, z.Records[RecordTypeAAAA])
 
 	// remove no existing also works
 	z.Remove(aaaa)
