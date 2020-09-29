@@ -51,6 +51,52 @@ func Test_splitDomain(t *testing.T) {
 	}
 }
 
+func Test_validateDomain(t *testing.T) {
+	tests := []struct {
+		domain string
+		err    bool
+	}{
+		{
+			domain: "domain.com",
+			err:    false,
+		},
+		{
+			domain: "a.domain.com",
+			err:    false,
+		},
+		{
+			domain: "a.b.c.domain.com",
+			err:    false,
+		},
+		{
+			domain: "bleh.grid.deboeck.xyz",
+			err:    false,
+		},
+		{
+			domain: "domain.com.",
+			err:    true,
+		},
+		{
+			domain: "foo",
+			err:    true,
+		},
+		{
+			domain: "",
+			err:    true,
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.domain, func(t *testing.T) {
+			err := validateDomain(tt.domain)
+			if tt.err {
+				assert.Error(t, err)
+			} else {
+				assert.NoError(t, err)
+			}
+		})
+	}
+}
+
 func TestRecordFromIP(t *testing.T) {
 	tests := []struct {
 		ip     net.IP
