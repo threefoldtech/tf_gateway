@@ -10,7 +10,6 @@ var (
 	RecordTypeA     = RecordType("a")
 	RecordTypeAAAA  = RecordType("aaaa")
 	RecordTypeCNAME = RecordType("cname")
-	RecordTypeSOA   = RecordType("soa")
 )
 
 // Record define the interface to be a DNS record
@@ -49,15 +48,6 @@ type RecordCname struct {
 // Type implements Record interface
 func (r RecordCname) Type() RecordType {
 	return RecordTypeCNAME
-}
-
-type RecordSOA struct {
-	TTL     int    `json:"ttl"`
-	Mbox    string `json:"mbox"`
-	Ns      string `json:"ns"`
-	Refresh int    `json:"refresh"`
-	Retry   int    `json:"retry"`
-	Expire  int    `json:"expire"`
 }
 
 // Zone is a DNS zone. It hosts multiple records and belong to a owner

@@ -325,12 +325,21 @@ func recordFromIP(ip net.IP) (r Record) {
 }
 
 func validateDomain(domain string) error {
+	if len(domain) == 0 {
+		return fmt.Errorf("incorrect format for domain %s", domain)
+	}
+
 	if strings.Count(domain, ".") < 1 {
 		return fmt.Errorf("incorrect format for domain %s", domain)
 	}
 
 	if domain[len(domain)-1] == '.' {
 		return fmt.Errorf("incorrect format for domain %s", domain)
+	}
+
+	if strings.Contains(domain, "..") {
+		return fmt.Errorf("incorrect format for domain %s", domain)
+
 	}
 
 	return nil

@@ -84,6 +84,10 @@ func Test_validateDomain(t *testing.T) {
 			domain: "",
 			err:    true,
 		},
+		{
+			domain: "foo..com",
+			err:    true,
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.domain, func(t *testing.T) {
