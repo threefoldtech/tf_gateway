@@ -147,6 +147,10 @@ func (c *Mgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
 
 	log.Info().Msgf("add subdomain %s %+v", domain, IPs)
 
+	if err := validateDomain(domain); err != nil {
+		return err
+	}
+
 	name, zone := splitDomain(domain)
 
 	con := c.redis.Get()
@@ -195,6 +199,10 @@ func (c *Mgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
 
 // RemoveSubdomain remove a domain added with AddSubdomain
 func (c *Mgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
+	if err := validateDomain(domain); err != nil {
+		return err
+	}
+
 	name, zone := splitDomain(domain)
 
 	con := c.redis.Get()
@@ -250,6 +258,10 @@ func (c *Mgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
 
 // AddDomainDelagate configures coreDNS to manage domain
 func (c *Mgr) AddDomainDelagate(user, domain string) error {
+	if err := validateDomain(domain); err != nil {
+		return err
+	}
+
 	owner, err := c.getZoneOwner(domain)
 	if err != nil {
 		return err
@@ -265,6 +277,10 @@ func (c *Mgr) AddDomainDelagate(user, domain string) error {
 
 // RemoveDomainDelagate remove a delagated domain added with AddDomainDelagate
 func (c *Mgr) RemoveDomainDelagate(user string, domain string) error {
+	if err := validateDomain(domain); err != nil {
+		return err
+	}
+
 	owner, err := c.getZoneOwner(domain)
 	if err != nil {
 		return err
@@ -306,4 +322,25 @@ func recordFromIP(ip net.IP) (r Record) {
 		}
 	}
 	return r
+}
+
+func validateDomain(domain string) error {
+	if len(domain) == 0 {
+		return fmt.Errorf("incorrect format for domain %s", domain)
+	}
+
+	if strings.Count(domain, ".") < 1 {
+		return fmt.Errorf("incorrect format for domain %s", domain)
+	}
+
+	if domain[len(domain)-1] == '.' {
+		return fmt.Errorf("incorrect format for domain %s", domain)
+	}
+
+	if strings.Contains(domain, "..") {
+		return fmt.Errorf("incorrect format for domain %s", domain)
+
+	}
+
+	return nil
 }
