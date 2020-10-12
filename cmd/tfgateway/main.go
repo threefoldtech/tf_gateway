@@ -199,7 +199,7 @@ func run(c *cli.Context) error {
 		}
 	}
 
-	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dnsMgr, wgMgr, kp)
+	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dnsMgr, wgMgr, kp, e)
 
 	engine := provision.New(provision.EngineOps{
 		NodeID: kp.Identity(),
