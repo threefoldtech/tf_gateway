@@ -1,14 +1,18 @@
 package tfgateway
 
 import (
+	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
 	"errors"
 	"fmt"
 	"math"
 	"net"
+	"strconv"
 
 	"github.com/threefoldtech/zos/pkg/crypto"
+
+	"github.com/threefoldtech/tfexplorer/client"
 
 	"github.com/threefoldtech/tfexplorer/models/generated/workloads"
 	"github.com/threefoldtech/tfexplorer/schema"
@@ -51,17 +55,20 @@ type Provisioner struct {
 	dns   *dns.Mgr
 	wg    *wg.Mgr
 
+	explorer *client.Client
+
 	Provisioners    map[provision.ReservationType]provision.ProvisionerFunc
 	Decommissioners map[provision.ReservationType]provision.DecomissionerFunc
 }
 
 // NewProvisioner creates a new 0-OS provisioner
-func NewProvisioner(proxy *proxy.Mgr, dns *dns.Mgr, wg *wg.Mgr, kp identity.KeyPair) *Provisioner {
+func NewProvisioner(proxy *proxy.Mgr, dns *dns.Mgr, wg *wg.Mgr, kp identity.KeyPair, explorer *client.Client) *Provisioner {
 	p := &Provisioner{
-		kp:    kp,
-		proxy: proxy,
-		dns:   dns,
-		wg:    wg,
+		kp:       kp,
+		proxy:    proxy,
+		dns:      dns,
+		wg:       wg,
+		explorer: explorer,
 	}
 	p.Provisioners = map[provision.ReservationType]provision.ProvisionerFunc{
 		ProxyReservation:         p.proxyProvision,
@@ -84,7 +91,7 @@ func NewProvisioner(proxy *proxy.Mgr, dns *dns.Mgr, wg *wg.Mgr, kp identity.KeyP
 	return p
 }
 
-func (p *Provisioner) decrypt(msg string) (string, error) {
+func (p *Provisioner) decrypt(msg, userID string, reservationVersion int) (string, error) {
 	if len(msg) == 0 {
 		return "", nil
 	}
@@ -94,9 +101,43 @@ func (p *Provisioner) decrypt(msg string) (string, error) {
 		return "", err
 	}
 
-	out, err := crypto.Decrypt(bytes, p.kp.PrivateKey)
+	var (
+		out        []byte
+		userPubKey ed25519.PublicKey
+	)
+
+	switch reservationVersion {
+	case 0:
+		out, err = crypto.Decrypt(bytes, p.kp.PrivateKey)
+	case 1:
+		userPubKey, err = p.fetchUserPublicKey(userID)
+		if err != nil {
+			return "", fmt.Errorf("failed to retrieve user %s public key: %w", userID, err)
+		}
+		out, err = crypto.DecryptECDH(bytes, p.kp.PrivateKey, userPubKey)
+	}
+
 	return string(out), err
 
+}
+
+func (p *Provisioner) fetchUserPublicKey(userID string) (ed25519.PublicKey, error) {
+	iid, err := strconv.Atoi(userID)
+	if err != nil {
+		return nil, err
+	}
+
+	user, err := p.explorer.Phonebook.Get(schema.ID(iid))
+	if err != nil {
+		return nil, err
+	}
+
+	b, err := hex.DecodeString(user.Pubkey)
+	if err != nil {
+		return nil, err
+	}
+
+	return ed25519.PublicKey(b), nil
 }
 
 func proxyConverter(w workloads.Workloader) (Proxy, string, error) {

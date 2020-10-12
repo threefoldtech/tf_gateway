@@ -42,7 +42,7 @@ func (p *Provisioner) reverseProxyProvision(ctx context.Context, r *provision.Re
 	log.Info().Str("id", r.ID).Msgf("provision proxy %+v", data)
 
 	var err error
-	data.Secret, err = p.decrypt(data.Secret)
+	data.Secret, err = p.decrypt(data.Secret, r.User, r.Version)
 	if err != nil {
 		return nil, fmt.Errorf("failed to decrypt secret: %w", err)
 	}
