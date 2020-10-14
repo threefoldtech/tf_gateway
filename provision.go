@@ -217,6 +217,7 @@ func WorkloadToProvisionType(w workloads.Workloader) (*provision.Reservation, er
 		ToDelete:  w.GetNextAction() == workloads.NextActionDelete,
 		Reference: w.GetReference(),
 		Result:    resultFromSchemaType(w.GetResult()),
+		Version:   w.GetVersion(),
 	}
 
 	// to ensure old reservation workload that are already running
