@@ -64,6 +64,17 @@ func (z *Zone) Add(r Record) {
 	z.Records[r.Type()] = append(z.Records[r.Type()], r)
 }
 
+// HasRecordType checks if the zone already has some entries
+// for the RecordType rt
+func (z *Zone) HasRecordType(rt RecordType) bool {
+	if z.Records == nil {
+		return false
+	}
+
+	_, exists := z.Records[rt]
+	return exists
+}
+
 // Remove removes a record from the zone
 func (z *Zone) Remove(r Record) {
 	if z.Records == nil {

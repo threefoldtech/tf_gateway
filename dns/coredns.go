@@ -184,6 +184,9 @@ func (c *Mgr) AddSubdomain(user string, domain string, IPs []net.IP) error {
 
 	for _, ip := range IPs {
 		r := recordFromIP(ip)
+		if zr.HasRecordType(r.Type()) {
+			return fmt.Errorf("there are already some record for domain %s, cannot overwrite them. Decomission the previous workload first", domain)
+		}
 		zr.Add(r)
 	}
 

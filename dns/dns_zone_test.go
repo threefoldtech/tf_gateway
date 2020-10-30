@@ -50,3 +50,24 @@ func TestZone(t *testing.T) {
 	z.Remove(b)
 	assert.Equal(t, 2, len(z.Records[RecordTypeA]))
 }
+
+func TestHasRecordType(t *testing.T) {
+	z := &Zone{}
+
+	a := RecordA{
+		IP4: "10.0.0.1",
+		TTL: 3600,
+	}
+	aaaa := RecordAAAA{
+		IP6: "fdb5:7faa:7be7:3ef3::1",
+		TTL: 3600,
+	}
+
+	assert.False(t, z.HasRecordType(RecordTypeA))
+
+	z.Add(a)
+	assert.True(t, z.HasRecordType(RecordTypeA))
+
+	z.Add(aaaa)
+	assert.True(t, z.HasRecordType(RecordTypeAAAA))
+}
