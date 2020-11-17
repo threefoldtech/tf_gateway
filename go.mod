@@ -26,7 +26,7 @@ require (
 	github.com/rs/zerolog v1.19.0
 	github.com/shirou/gopsutil v2.20.6+incompatible
 	github.com/stretchr/testify v1.6.1
-	github.com/threefoldtech/tfexplorer v0.4.1-0.20201008114938-260c3694ef48
+	github.com/threefoldtech/tfexplorer v0.4.1
 	github.com/threefoldtech/zos v0.4.4-rc1.0.20201014124201-bb6492e37aa5
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/vishvananda/netlink v1.1.0
