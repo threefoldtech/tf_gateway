@@ -605,6 +605,7 @@ github.com/termie/go-shutil v0.0.0-20140729215957-bcacb06fecae/go.mod h1:quDq6Se
 github.com/threefoldtech/tfexplorer v0.3.2-0.20200918135528-58e333897454/go.mod h1:fA2oR3D6Wre9tXSiWFiapeuUI5UA9aXP9fejr6hDEYM=
 github.com/threefoldtech/tfexplorer v0.4.0 h1:Km5kQEOe/MFSqR7iSZ/oCSQG16+F1oknCOTT+/kpg5k=
 github.com/threefoldtech/tfexplorer v0.4.0/go.mod h1:wxnWTecsczkzkiJoZB19tt49l8CWkTNLD2VkKBK6mSc=
+github.com/threefoldtech/tfexplorer v0.4.1-0.20200923122946-a429c33ade21/go.mod h1:wxnWTecsczkzkiJoZB19tt49l8CWkTNLD2VkKBK6mSc=
 github.com/threefoldtech/tfexplorer v0.4.1-0.20201008114938-260c3694ef48 h1:EADdhzDfiRYpddc9dSznO5nzg7hTyckUZn2NRoE0WT8=
 github.com/threefoldtech/tfexplorer v0.4.1-0.20201008114938-260c3694ef48/go.mod h1:0261YnFlaQNDv1hNzdJc/2DuYq9B9qe9D6QnZuZOCh0=
 github.com/threefoldtech/tfexplorer v0.4.1 h1:MoGpPQDxLJrYXsMYLDj7lYSQfL6ijUgrl2l6I4hmusw=
@@ -622,6 +623,8 @@ github.com/threefoldtech/zos v0.4.4-rc1.0.20201014085417-f295fe784c5b h1:ecURVmr
 github.com/threefoldtech/zos v0.4.4-rc1.0.20201014085417-f295fe784c5b/go.mod h1:Mcx3Ncz6bh69a/bhGWIYIeHFYa+Wtk5aSRmznidaYeU=
 github.com/threefoldtech/zos v0.4.4-rc1.0.20201014124201-bb6492e37aa5 h1:ff40bLHRAtqvwYMBmxNlm9LSFXWl4dt/rC9J/k3EMp4=
 github.com/threefoldtech/zos v0.4.4-rc1.0.20201014124201-bb6492e37aa5/go.mod h1:Mcx3Ncz6bh69a/bhGWIYIeHFYa+Wtk5aSRmznidaYeU=
+github.com/threefoldtech/zos v0.4.4 h1:ORyg4/SgToPibFliie4odUQcysElH1w7y4Sn6pTRdog=
+github.com/threefoldtech/zos v0.4.4/go.mod h1:IngYUxXBV7JtbEYP7hJwREMeBQllggn5FVubuA7T0EE=
 github.com/tidwall/pretty v1.0.0 h1:HsD+QiTn7sK6flMKIvNmpqz1qrpP3Ps6jOKIKMooyg4=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tyler-smith/go-bip39 v0.0.0-20180618194314-52158e4697b8/go.mod h1:sJ5fKU0s6JVwZjjcUEX2zFOnvq0ASQ2K9Zr6cf67kNs=
