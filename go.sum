@@ -629,6 +629,8 @@ github.com/threefoldtech/zos v0.4.4-rc1.0.20201014124201-bb6492e37aa5 h1:ff40bLH
 github.com/threefoldtech/zos v0.4.4-rc1.0.20201014124201-bb6492e37aa5/go.mod h1:Mcx3Ncz6bh69a/bhGWIYIeHFYa+Wtk5aSRmznidaYeU=
 github.com/threefoldtech/zos v0.4.6 h1:zBBxnLIMDKbQuLbhbYEUZBaXMc5PmQ9riHFyaAEuD4s=
 github.com/threefoldtech/zos v0.4.6/go.mod h1:fij4LzzIhY6jsIR9bjoK+5U9tqsK9Y5gEf0Ae7HZekg=
+github.com/threefoldtech/zos v0.4.7-rc1 h1:NnrEFy4CNVfnrTVuD6wIIV+4pW98DSI7pXSu8q4lE5s=
+github.com/threefoldtech/zos v0.4.7-rc1/go.mod h1:fij4LzzIhY6jsIR9bjoK+5U9tqsK9Y5gEf0Ae7HZekg=
 github.com/tidwall/pretty v1.0.0 h1:HsD+QiTn7sK6flMKIvNmpqz1qrpP3Ps6jOKIKMooyg4=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tyler-smith/go-bip39 v0.0.0-20180618194314-52158e4697b8/go.mod h1:sJ5fKU0s6JVwZjjcUEX2zFOnvq0ASQ2K9Zr6cf67kNs=
