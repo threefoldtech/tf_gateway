@@ -109,7 +109,7 @@ func (p *Provisioner) decrypt(msg, userID string, reservationVersion int) (strin
 	switch reservationVersion {
 	case 0:
 		out, err = crypto.Decrypt(bytes, p.kp.PrivateKey)
-	case 1:
+	default:
 		userPubKey, err = p.fetchUserPublicKey(userID)
 		if err != nil {
 			return "", fmt.Errorf("failed to retrieve user %s public key: %w", userID, err)
