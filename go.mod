@@ -26,16 +26,14 @@ require (
 	github.com/rs/zerolog v1.19.0
 	github.com/shirou/gopsutil v2.20.6+incompatible
 	github.com/stretchr/testify v1.6.1
-	github.com/threefoldtech/tfexplorer v0.4.1-0.20201014110255-653c7314b944
-	github.com/threefoldtech/zos v0.4.7-rc1
+	github.com/threefoldtech/tfexplorer v0.4.1-0.20201120111415-6fefe983b035
+	github.com/threefoldtech/zos v0.4.7-rc8
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20200520041808-52d707b772fe // indirect
 	go.opencensus.io v0.22.4 // indirect
-	golang.org/x/crypto v0.0.0-20200709230013-948cd5f35899 // indirect
 	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
 	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208 // indirect
-	golang.org/x/sys v0.0.0-20200728102440-3e129f6d46b1 // indirect
 	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20191219145116-fa6499c8e75f
 	google.golang.org/genproto v0.0.0-20200728010541-3dc8dca74b7b // indirect
