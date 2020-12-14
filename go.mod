@@ -27,7 +27,7 @@ require (
 	github.com/shirou/gopsutil v2.20.6+incompatible
 	github.com/stretchr/testify v1.6.1
 	github.com/threefoldtech/tfexplorer v0.4.1-0.20201120111415-6fefe983b035
-	github.com/threefoldtech/zos v0.4.7-rc8
+	github.com/threefoldtech/zos v0.4.7-rc9.0.0.20201214120726-ece8eec3ee8e
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20200520041808-52d707b772fe // indirect
