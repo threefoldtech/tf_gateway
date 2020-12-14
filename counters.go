@@ -17,6 +17,11 @@ type Counters struct {
 	NRU primitives.CounterUint64 // network units
 }
 
+// CheckMemoryRequirements implements the provision.Statser interface on the tfgateway Counters.
+func (c *Counters) CheckMemoryRequirements(r *provision.Reservation, totalMemAvailable uint64) error {
+	return nil
+}
+
 // CurrentWorkloads return the number of each workloads provisioned on the system
 func (c *Counters) CurrentWorkloads() directory.WorkloadAmount {
 	return directory.WorkloadAmount{

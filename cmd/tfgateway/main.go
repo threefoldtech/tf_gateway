@@ -201,7 +201,7 @@ func run(c *cli.Context) error {
 
 	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dnsMgr, wgMgr, kp, e)
 
-	engine := provision.New(provision.EngineOps{
+	engine, err := provision.New(provision.EngineOps{
 		NodeID: kp.Identity(),
 		Cache:  localStore,
 		Source: provision.CombinedSource(
@@ -214,6 +214,9 @@ func run(c *cli.Context) error {
 		Signer:         wgID,
 		Statser:        staster,
 	})
+	if err != nil {
+		return fmt.Errorf("failed to provision the engine: %w", err)
+	}
 
 	log.Info().Str("identity", kp.Identity()).Msg("starting gateway")
 
