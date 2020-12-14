@@ -10,7 +10,7 @@ all: build
 
 getdeps:
 	@echo "Installing golint" && go get -u golang.org/x/lint/golint
-	@echo "Installing gocyclo" && go get -u github.com/fzipp/gocyclo
+	@echo "Installing gocyclo" && go get -u github.com/fzipp/gocyclo/cmd/gocyclo
 	@echo "Installing deadcode" && go get -u github.com/remyoudompheng/go-misc/deadcode
 	@echo "Installing misspell" && go get -u github.com/client9/misspell/cmd/misspell
 	@echo "Installing ineffassign" && go get -u github.com/gordonklaus/ineffassign
@@ -49,7 +49,7 @@ staticcheck:
 
 test: verifiers build
 	# we already ran vet separately, so safe to turn it off here
-	@echo "Running unit tests with GOFLAGS=${GOFLAGS}"	
+	@echo "Running unit tests with GOFLAGS=${GOFLAGS}"
 	go test -v -vet=off ./...
 
 testrace: verifiers build

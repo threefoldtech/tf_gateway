@@ -12,39 +12,39 @@ import (
 	"golang.zx2c4.com/wireguard/wgctrl/wgtypes"
 )
 
-func createMgr(t *testing.T) *Mgr {
-	kp, err := identity.FromSeed([]byte("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
-	require.NoError(t, err)
-
-	mgr, err := New(kp, NewIPPool(kp), "192.168.0.100:1234", "wg-test")
-	require.NoError(t, err)
-	return mgr
-}
-
-func getWgDevice(name, nsName string) (*wgtypes.Device, error) {
-	netNS, err := namespace.GetByName(nsName)
-	if err != nil {
-		return nil, err
-	}
-	defer netNS.Close()
-
-	var device *wgtypes.Device
-	err = netNS.Do(func(_ ns.NetNS) error {
-		link, err := wireguard.GetByName(name)
-		if err != nil {
-			return err
-		}
-		device, err = link.Device()
-		if err != nil {
-			return err
-		}
-		return nil
-	})
-	return device, err
-}
-
 func TestAddRemovePeer(t *testing.T) {
 	t.Skip()
+
+	createMgr := func(t *testing.T) *Mgr {
+		kp, err := identity.FromSeed([]byte("aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa"))
+		require.NoError(t, err)
+
+		mgr, err := New(kp, NewIPPool(kp), "192.168.0.100:1234", "wg-test")
+		require.NoError(t, err)
+		return mgr
+	}
+
+	getWgDevice := func(name, nsName string) (*wgtypes.Device, error) {
+		netNS, err := namespace.GetByName(nsName)
+		if err != nil {
+			return nil, err
+		}
+		defer netNS.Close()
+
+		var device *wgtypes.Device
+		err = netNS.Do(func(_ ns.NetNS) error {
+			link, err := wireguard.GetByName(name)
+			if err != nil {
+				return err
+			}
+			device, err = link.Device()
+			if err != nil {
+				return err
+			}
+			return nil
+		})
+		return device, err
+	}
 
 	mgr := createMgr(t)
 	defer t.Cleanup(func() {
