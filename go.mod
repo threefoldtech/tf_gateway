@@ -5,6 +5,7 @@ go 1.14
 require (
 	github.com/Microsoft/hcsshim v0.8.9 // indirect
 	github.com/alicebob/miniredis/v2 v2.11.4
+	github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496
 	github.com/cenkalti/backoff/v3 v3.2.2
 	github.com/containerd/cgroups v0.0.0-20200710171044-318312a37340 // indirect
 	github.com/containerd/continuity v0.0.0-20200710164510-efbc4488d8fe // indirect
@@ -26,8 +27,8 @@ require (
 	github.com/rs/zerolog v1.19.0
 	github.com/shirou/gopsutil v2.20.6+incompatible
 	github.com/stretchr/testify v1.6.1
-	github.com/threefoldtech/tfexplorer v0.4.1-0.20201120111415-6fefe983b035
-	github.com/threefoldtech/zos v0.4.7-rc9.0.0.20201214120726-ece8eec3ee8e
+	github.com/threefoldtech/tfexplorer v0.4.8-0.20201218110633-b1b2cd7b4975
+	github.com/threefoldtech/zos v0.4.7-rc9.3
 	github.com/urfave/cli/v2 v2.2.0
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20200520041808-52d707b772fe // indirect
