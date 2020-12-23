@@ -7,6 +7,7 @@ import (
 	"net"
 	"strings"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/rs/zerolog/log"
 
 	"github.com/gomodule/redigo/redis"
@@ -325,6 +326,10 @@ func recordFromIP(ip net.IP) (r Record) {
 }
 
 func validateDomain(domain string) error {
+	if !govalidator.IsDNSName(domain) {
+		return fmt.Errorf("domain '%s' name is invalid", domain)
+	}
+
 	if len(domain) == 0 {
 		return fmt.Errorf("incorrect format for domain %s", domain)
 	}
