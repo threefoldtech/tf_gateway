@@ -28,6 +28,7 @@ import (
 	"github.com/rs/zerolog"
 	"github.com/rs/zerolog/log"
 
+	"github.com/asaskevich/govalidator"
 	"github.com/threefoldtech/tfexplorer/client"
 	"github.com/threefoldtech/tfexplorer/models/generated/directory"
 	"github.com/threefoldtech/zos/pkg/identity"
@@ -102,6 +103,18 @@ var appCLI = cli.App{
 	Action: run,
 }
 
+func validDomain(d string) bool {
+	return govalidator.IsDNSName(d)
+}
+
+func validDomains(ds []string) bool {
+	for _, d := range ds {
+		if !validDomain(d) {
+			return false
+		}
+	}
+	return true
+}
 func main() {
 	err := appCLI.Run(os.Args)
 	if err != nil {
@@ -112,7 +125,7 @@ func main() {
 func run(c *cli.Context) error {
 	pool, err := redis.NewPool(c.String("redis"))
 	if err != nil {
-		return fmt.Errorf("failed to connec to redis configuration server: %w", err)
+		return fmt.Errorf("failed to connect to redis configuration server: %w", err)
 	}
 
 	kp, err := ensureID(c.String("seed"))
@@ -136,7 +149,15 @@ func run(c *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to fetch location: %w", err)
 	}
+	domains := c.StringSlice("domains")
+	nameservers := c.StringSlice("nameservers")
+	if !validDomains(domains) {
+		return fmt.Errorf("invalid domains: %v", domains)
+	}
 
+	if !validDomains(nameservers) {
+		return fmt.Errorf("invalid nameservers: %v", nameservers)
+	}
 	gw := directory.Gateway{
 		NodeId:       kp.Identity(),
 		FarmId:       c.Int64("farm"),
