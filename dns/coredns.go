@@ -327,7 +327,7 @@ func recordFromIP(ip net.IP) (r Record) {
 
 func validateDomain(domain string) error {
 	if !govalidator.IsDNSName(domain) {
-		return fmt.Errorf("domain '%s' name is invalid")
+		return fmt.Errorf("domain '%s' name is invalid", domain)
 	}
 
 	if len(domain) == 0 {
