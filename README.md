@@ -455,3 +455,5 @@ systemctl stop systemd-resolved
 systemctl start tfredis && systemctl start coredns && systemctl start tcprouter && systemctl start tfgateway
 
 ```
+
+Make sure to replace variables starting with `$$` in the above with the right values
