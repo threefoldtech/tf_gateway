@@ -10,11 +10,17 @@
 
 ## Deployment
 
-![arhcitecure_overview](docs/asset/overview.png)
+![architecure_overview](docs/asset/overview.png)
 
 The TFGateway works be reading the reservation detail from the TFExplorer. It then convert these reservation into configuration readable by the TCP Router server or CoreDNS and write them into a redis server.
 
 Both CoreDNS and the TCP router are watching redis and reloads there internal configuration evrytime there is a change in redis.
+
+### Binaries needed
+- redis server
+- [coredns-redis](https://github.com/threefoldtech/coredns-redis)
+- [tcprouter](https://github.com/threefoldtech/tcprouter)
+- [tfgateway](https://github.com/threefoldtech/tfgateway)
 
 ### Delegation of domain
 
@@ -130,6 +136,11 @@ Configuration of both services happen through a redis backend that is used as a 
 
 So all 4 need to be running on a node, with some ip/tcp ports properly opened up to handle traffic.
 
+#### notes after installations
+
+your system might be running resolved and using port 53, needed to be freed for coredns, also the 6379 port of redis will be used as soon as the default redis unit starts
+- stop and disable redis unit `systemctl stop redis`
+- stop and disable systemd-resolved unit `systemctl stop systemd-resolved`
 
 Hence: 
 
@@ -303,3 +314,144 @@ The client-server part seems a bit convoluted, but please bear with me:
 
 The moment you want to expose a service, the grid adds a container in the same user network of the running service container, and starts a proxy, that is also a client towards the tfgateway server.  
 The tfgateway's tcp proxy connects the outside listener with the the proxy client in that addon container, and as such the the proxy in the addon container can forward the queries towards the service.
+
+
+
+## example deployment script
+
+```
+apt update -y
+apt install redis-server redis-tools -y
+mkdir -p /etc/coredns
+mkdir -p /etc/tcprouter
+
+
+
+cat << EOF > /etc/identity.seed 
+"1.1.0"{"mnemonic":"coral light army gather adapt blossom school alcohol coral light army gather adapt blossom school alcohol coral logic blue tragic danger response sister name","threebotid":2145}
+EOF
+
+cat << EOF > /etc/tfredis.conf
+bind 127.0.0.1
+EOF
+
+
+cat << EOF > /etc/coredns/Corefile
+. {
+    log 
+    errors
+    redis  {
+        address 127.0.0.1:6379
+    }
+    forward . 174.138.6.79 8.8.8.8 1.1.1.1  
+}
+
+EOF
+
+
+
+cat << EOF > /etc/tcprouter/router.toml
+[server]
+addr = "0.0.0.0"
+port = 443
+httpport = 80
+clientsport = 18000
+[server.dbbackend]
+type     = "redis"
+addr     = "127.0.0.1"
+port     = 6379
+refresh  = 10
+EOF
+
+
+
+
+cat << EOF > /etc/systemd/system/tfredis.service
+[Unit]
+Description=The Redis server for TFGateway
+After=network.target 
+
+[Service]
+Type=simple              
+Environment=statedir=/run/redis
+PIDFile=/run/redis/redis.pid
+ExecStartPre=/bin/touch /var/log/redis.log 
+ExecStartPre=/bin/mkdir -p /run/redis
+ExecStart=redis-server /etc/tfredis.conf
+ExecReload=/bin/kill -USR2 $MAINPID                          
+MemoryAccounting=true
+MemoryHigh=800M
+MemoryMax=1G
+LimitNOFILE=10050
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+
+cat << EOF > /etc/systemd/system/coredns.service
+[Unit]
+Description=CoreDNS
+After=network.target
+After=tfredis.target
+
+[Service]
+ExecStart=/usr/local/bin/coredns -conf /etc/coredns/Corefile
+Type=simple
+Restart=on-failure
+MemoryAccounting=true
+MemoryHigh=800M
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+
+
+cat << EOF > /etc/systemd/system/tcprouter.service
+[Unit]
+Description=TCP router server
+After=network.target
+After=coredns.target
+
+[Service]
+ExecStart=/usr/local/bin/trs --config /etc/tcprouter/router.toml
+Type=simple
+Restart=on-failure
+MemoryAccounting=true
+MemoryHigh=800M
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+
+
+
+cat << EOF > /etc/systemd/system/tfgateway.service
+[Unit]
+Description=tfgateway server
+After=network.target
+After=tcprouter.target
+
+[Service]
+ExecStartPre=/bin/bash -c "/bin/systemctl set-environment ip=$(/sbin/ip r get 1.1.1.1 | awk '{print $7}')"
+ExecStart=/usr/local/bin/tfgateway --seed /etc/identity.seed --explorer $$EXPLORER_URL/api/v1 --nameservers $$NAMESERVER --endpoint ${ip}:3443 --domains $$DOMAIN --farm $$FARM_ID
+
+Type=simple
+Restart=on-failure
+MemoryAccounting=true
+MemoryHigh=800M
+MemoryMax=1G
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+systemctl stop redis
+systemctl stop systemd-resolved
+systemctl start tfredis && systemctl start coredns && systemctl start tcprouter && systemctl start tfgateway
+
+```
