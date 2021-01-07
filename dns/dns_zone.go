@@ -10,6 +10,7 @@ var (
 	RecordTypeA     = RecordType("a")
 	RecordTypeAAAA  = RecordType("aaaa")
 	RecordTypeCNAME = RecordType("cname")
+	RecordTypeTXT   = RecordType("txt")
 )
 
 // Record define the interface to be a DNS record
@@ -48,6 +49,17 @@ type RecordCname struct {
 // Type implements Record interface
 func (r RecordCname) Type() RecordType {
 	return RecordTypeCNAME
+}
+
+// RecordTXT is a TXT DNS record
+type RecordTXT struct {
+	Text string `json:"text"`
+	TTL  int    `json:"ttl"`
+}
+
+// Type implements Record interface
+func (r RecordTXT) Type() RecordType {
+	return RecordTypeTXT
 }
 
 // Zone is a DNS zone. It hosts multiple records and belong to a owner
@@ -134,7 +146,14 @@ func (rs records) UnmarshalJSON(b []byte) error {
 					return err
 				}
 				r = x
+			case RecordTypeTXT:
+				x := RecordTXT{}
+				if err := json.Unmarshal(b, &x); err != nil {
+					return err
+				}
+				r = x
 			}
+
 			rs[typ] = append(rs[typ], r)
 		}
 	}

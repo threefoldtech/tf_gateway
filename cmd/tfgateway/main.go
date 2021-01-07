@@ -158,6 +158,15 @@ func run(c *cli.Context) error {
 	if !validDomains(nameservers) {
 		return fmt.Errorf("invalid nameservers: %v", nameservers)
 	}
+
+	dnsMgr := dns.New(pool, kp.Identity())
+	for _, domain := range domains {
+		log.Info().Msgf("gateway will manage domain %s", domain)
+		if err := dnsMgr.AddDomainDelagate(kp.Identity(), kp.Identity(), domain); err != nil {
+			return fmt.Errorf("fail to manage domain %s", domain)
+		}
+	}
+
 	gw := directory.Gateway{
 		NodeId:       kp.Identity(),
 		FarmId:       c.Int64("farm"),
@@ -170,8 +179,8 @@ func run(c *cli.Context) error {
 			Longitude: loc.Longitute,
 			Latitude:  loc.Latitude,
 		},
-		ManagedDomains: c.StringSlice("domains"),
-		DnsNameserver:  c.StringSlice("nameservers"),
+		ManagedDomains: domains,
+		DnsNameserver:  nameservers,
 		TcpRouterPort:  c.Int64("tcp-client-port"),
 		FreeToUse:      c.Bool("free"),
 	}
@@ -210,14 +219,6 @@ func run(c *cli.Context) error {
 				log.Error().Err(err).Msgf("failed to cleanup network namespace")
 			}
 		}()
-	}
-
-	dnsMgr := dns.New(pool, kp.Identity())
-	for _, domain := range gw.ManagedDomains {
-		log.Info().Msgf("gateway will manage domain %s", domain)
-		if err := dnsMgr.AddDomainDelagate(kp.Identity(), domain); err != nil {
-			return fmt.Errorf("fail to manage domain %s", domain)
-		}
 	}
 
 	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dnsMgr, wgMgr, kp, e)

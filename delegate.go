@@ -21,7 +21,7 @@ func (p *Provisioner) domainDeleateProvision(ctx context.Context, r *provision.R
 	}
 	log.Info().Str("id", r.ID).Msgf("provision Delegate %+v", data)
 
-	return nil, p.dns.AddDomainDelagate(r.User, data.Domain)
+	return nil, p.dns.AddDomainDelagate(r.NodeID, r.User, data.Domain)
 }
 
 func (p *Provisioner) domainDeleateDecomission(ctx context.Context, r *provision.Reservation) error {
