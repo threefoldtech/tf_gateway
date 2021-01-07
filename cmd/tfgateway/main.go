@@ -46,7 +46,7 @@ var appCLI = cli.App{
 		},
 		&cli.StringFlag{
 			Name:  "explorer",
-			Value: "https://explorer.grid.tf/explorer",
+			Value: "https://explorer.grid.tf/api/v1",
 			Usage: "URL to the explorer API used to poll reservations",
 		},
 		&cli.StringFlag{
@@ -186,14 +186,16 @@ func run(c *cli.Context) error {
 	}
 
 	bo := backoff.NewExponentialBackOff()
-	bo.MaxElapsedTime = 0
-	if err := backoff.Retry(registerID(gw, e), bo); err != nil {
+	bo.MaxElapsedTime = 1 * time.Minute
+	bo.MaxInterval = 2 * time.Second
+	if err := backoff.RetryNotify(registerID(gw, e), bo, func(e error, d time.Duration) {
+		log.Err(e).Dur("sleep", d).Msg("failed to register to explorer")
+	}); err != nil {
 		return fmt.Errorf("failed to register gateway in the explorer: %w", err)
 	}
 
 	var wgMgr *wg.Mgr
 	if is4To6Enabled(c) {
-
 		// the Gateway4To6 workloads doesn't not survice gateway restart, so we clear all reservations from the
 		// cache so they are always re-provisionned
 		if err := localStore.ClearByType([]provision.ReservationType{tfgateway.Gateway4To6Reservation}); err != nil {
