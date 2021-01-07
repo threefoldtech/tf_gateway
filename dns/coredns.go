@@ -284,7 +284,7 @@ func (c *Mgr) setZoneOwnerTXTRecord(domain, identity, owner string) error {
 	const name = "__owner__"
 	var zone Zone
 	// we are not using the ZoneOwner struct because of
-	// 1- backward compatability issue since it does not define json tags
+	// 1- backward compatibility issue since it does not define json tags
 	// 2- extendability of this struct with more data in the future
 	data := struct {
 		Identity string `json:"identity"`
