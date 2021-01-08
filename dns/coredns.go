@@ -2,12 +2,12 @@ package dns
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"net"
 	"strings"
 
 	"github.com/asaskevich/govalidator"
+	"github.com/pkg/errors"
 	"github.com/rs/zerolog/log"
 
 	"github.com/gomodule/redigo/redis"
@@ -258,7 +258,7 @@ func (c *Mgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
 }
 
 // AddDomainDelagate configures coreDNS to manage domain
-func (c *Mgr) AddDomainDelagate(user, domain string) error {
+func (c *Mgr) AddDomainDelagate(identity, user, domain string) error {
 	if err := validateDomain(domain); err != nil {
 		return err
 	}
@@ -273,7 +273,35 @@ func (c *Mgr) AddDomainDelagate(user, domain string) error {
 	}
 
 	owner.Owner = user
-	return c.setZoneOwner(domain, owner)
+	if err := c.setZoneOwner(domain, owner); err != nil {
+		return errors.Wrap(err, "failed to set zone owner")
+	}
+
+	return c.setZoneOwnerTXTRecord(domain, identity, owner.Owner)
+}
+
+func (c *Mgr) setZoneOwnerTXTRecord(domain, identity, owner string) error {
+	const name = "__owner__"
+	var zone Zone
+	// we are not using the ZoneOwner struct because of
+	// 1- backward compatibility issue since it does not define json tags
+	// 2- extendability of this struct with more data in the future
+	data := struct {
+		Identity string `json:"identity"`
+		Owner    string `json:"owner"`
+	}{
+		Identity: identity,
+		Owner:    owner,
+	}
+
+	bytes, err := json.Marshal(data)
+	if err != nil {
+		return errors.Wrap(err, "failed to create owner TXT record")
+	}
+
+	zone.Add(RecordTXT{Text: string(bytes), TTL: 600})
+
+	return c.setZoneRecords(domain, name, zone)
 }
 
 // RemoveDomainDelagate remove a delagated domain added with AddDomainDelagate

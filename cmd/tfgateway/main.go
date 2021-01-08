@@ -46,7 +46,7 @@ var appCLI = cli.App{
 		},
 		&cli.StringFlag{
 			Name:  "explorer",
-			Value: "https://explorer.grid.tf/explorer",
+			Value: "https://explorer.grid.tf/api/v1",
 			Usage: "URL to the explorer API used to poll reservations",
 		},
 		&cli.StringFlag{
@@ -158,6 +158,15 @@ func run(c *cli.Context) error {
 	if !validDomains(nameservers) {
 		return fmt.Errorf("invalid nameservers: %v", nameservers)
 	}
+
+	dnsMgr := dns.New(pool, kp.Identity())
+	for _, domain := range domains {
+		log.Info().Msgf("gateway will manage domain %s", domain)
+		if err := dnsMgr.AddDomainDelagate(kp.Identity(), kp.Identity(), domain); err != nil {
+			return fmt.Errorf("fail to manage domain %s", domain)
+		}
+	}
+
 	gw := directory.Gateway{
 		NodeId:       kp.Identity(),
 		FarmId:       c.Int64("farm"),
@@ -170,21 +179,23 @@ func run(c *cli.Context) error {
 			Longitude: loc.Longitute,
 			Latitude:  loc.Latitude,
 		},
-		ManagedDomains: c.StringSlice("domains"),
-		DnsNameserver:  c.StringSlice("nameservers"),
+		ManagedDomains: domains,
+		DnsNameserver:  nameservers,
 		TcpRouterPort:  c.Int64("tcp-client-port"),
 		FreeToUse:      c.Bool("free"),
 	}
 
 	bo := backoff.NewExponentialBackOff()
-	bo.MaxElapsedTime = 0
-	if err := backoff.Retry(registerID(gw, e), bo); err != nil {
+	bo.MaxElapsedTime = 1 * time.Minute
+	bo.MaxInterval = 2 * time.Second
+	if err := backoff.RetryNotify(registerID(gw, e), bo, func(e error, d time.Duration) {
+		log.Err(e).Dur("sleep", d).Msg("failed to register to explorer")
+	}); err != nil {
 		return fmt.Errorf("failed to register gateway in the explorer: %w", err)
 	}
 
 	var wgMgr *wg.Mgr
 	if is4To6Enabled(c) {
-
 		// the Gateway4To6 workloads doesn't not survice gateway restart, so we clear all reservations from the
 		// cache so they are always re-provisionned
 		if err := localStore.ClearByType([]provision.ReservationType{tfgateway.Gateway4To6Reservation}); err != nil {
@@ -210,14 +221,6 @@ func run(c *cli.Context) error {
 				log.Error().Err(err).Msgf("failed to cleanup network namespace")
 			}
 		}()
-	}
-
-	dnsMgr := dns.New(pool, kp.Identity())
-	for _, domain := range gw.ManagedDomains {
-		log.Info().Msgf("gateway will manage domain %s", domain)
-		if err := dnsMgr.AddDomainDelagate(kp.Identity(), domain); err != nil {
-			return fmt.Errorf("fail to manage domain %s", domain)
-		}
 	}
 
 	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dnsMgr, wgMgr, kp, e)

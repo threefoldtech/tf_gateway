@@ -26,6 +26,11 @@ func TestZone(t *testing.T) {
 		TTL: 3600,
 	}
 
+	txt := RecordTXT{
+		Text: "hello world",
+		TTL:  3600,
+	}
+
 	z.Add(a)
 	z.Add(aaaa)
 
@@ -46,7 +51,9 @@ func TestZone(t *testing.T) {
 	// add 2 more and remove one in the middle
 	z.Add(b)
 	z.Add(c)
+	z.Add(txt)
 	assert.Equal(t, 3, len(z.Records[RecordTypeA]))
+	assert.Equal(t, 1, len(z.Records[RecordTypeTXT]))
 	z.Remove(b)
 	assert.Equal(t, 2, len(z.Records[RecordTypeA]))
 }

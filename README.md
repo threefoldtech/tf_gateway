@@ -10,7 +10,7 @@
 
 ## Deployment
 
-![architecure_overview](docs/asset/overview.png)
+![architecture_overview](docs/asset/overview.png)
 
 The TFGateway works be reading the reservation detail from the TFExplorer. It then convert these reservation into configuration readable by the TCP Router server or CoreDNS and write them into a redis server.
 
@@ -94,7 +94,7 @@ apt -o Dpkg::Options::='--force-confold' --force-yes -fuy install linux-image-5.
 apt -y autoremove
 
 # That is, if ufw isn't installed by default
-apt -o Dpkg::Options::='--force-confold' --force-yes -fuy install ufw 
+apt -o Dpkg::Options::='--force-confold' --force-yes -fuy install ufw
 ufw allow 34022/tcp
 
 ech | ufw enable
@@ -104,10 +104,10 @@ systemctl enable ufw --now
 # you might want to install docker for some ungoldly reason too
 # curl -fsSL https://download.docker.com/linux/ubuntu/gpg | apt-key add -
 # add-apt-repository "deb [arch=amd64] https://download.docker.com/linux/ubuntu $(lsb_release -cs) stable"
-# 
+#
 # apt update
 # apt-get install docker-ce docker-ce-cli containerd.io -y
-# 
+#
 # systemctl enable docker --now
 
 # wget -qO - https://www.mongodb.org/static/pgp/server-4.2.asc | sudo apt-key add -
@@ -126,9 +126,9 @@ apt-get -y install wireguard
 
 For networking, I assume you know your way ;-)
 
-Anyway, so the gateway does several things when you want to expose a service. As your container with a service is not directly available for Internet access, you'll want to expose it in some way. 
+Anyway, so the gateway does several things when you want to expose a service. As your container with a service is not directly available for Internet access, you'll want to expose it in some way.
 
-First, you want your service to be reachable by a DNS name (fqdn) in a domain (that can be readily available or that you want to handle). 
+First, you want your service to be reachable by a DNS name (fqdn) in a domain (that can be readily available or that you want to handle).
 Secondly, the service you want to expose needs to be reachable.
 
 TFGateway manages as well a dns server (coredns) as a tcp proxy that accepts connections from clients an forwards it to your service.
@@ -142,7 +142,7 @@ your system might be running resolved and using port 53, needed to be freed for 
 - stop and disable redis unit `systemctl stop redis`
 - stop and disable systemd-resolved unit `systemctl stop systemd-resolved`
 
-Hence: 
+Hence:
 
 #### Some systemd units
 
@@ -151,16 +151,16 @@ Hence:
 ```
 [Unit]
 Description=The Redis server for TFGateway
-After=network.target 
+After=network.target
 
 [Service]
-Type=simple              
+Type=simple
 Environment=statedir=/run/redis
 PIDFile=/run/redis/redis.pid
-ExecStartPre=/bin/touch /var/log/redis.log 
+ExecStartPre=/bin/touch /var/log/redis.log
 ExecStartPre=/bin/mkdir -p ${statedir}
 ExecStart=/usr/local/bin/redis-server /etc/tfredis.conf
-ExecReload=/bin/kill -USR2 $MAINPID                          
+ExecReload=/bin/kill -USR2 $MAINPID
 MemoryAccounting=true
 MemoryHigh=800M
 MemoryMax=1G
@@ -232,7 +232,7 @@ MemoryMax=1G
 WantedBy=multi-user.target
 ```
 
-These services need some config, for our usecases it's all static. 
+These services need some config, for our usecases it's all static.
 
 `/etc/tfredis.conf`
 
@@ -276,7 +276,7 @@ There are 2 parts:
 
 ### DNS
 
-Let's start by playing a dns server for your client, that wants to reach www.myspecialname.gateway.tf.  
+Let's start by playing a dns server for your client, that wants to reach www.myspecialname.gateway.tf.
 
 Your client has a dns server (Recursive DNS server,Rdns) configured in it's IP configuration.
 A Recursive DNS server handles the queries for your client, ultimately returning an IP address for and FQDN.
@@ -292,9 +292,9 @@ Rdns -> `.tf` nameserver: Hey, `.tf` nameserver, I'm looking for a nameserver th
 
 `.tf` nameserver -> Rdns : you can go ask the server with that ip.
 
-Rdns -> `gateway.tf` nameserver: hey `gateway.tf` server, I want the IP address of `www.myspecialname.gateway.tf`. 
+Rdns -> `gateway.tf` nameserver: hey `gateway.tf` server, I want the IP address of `www.myspecialname.gateway.tf`.
 
-`gateway.tf` nameserver -> Rdns: Uh-oh, I'm not authoritative for that fqdn, actually `myspecialname` is a subdomain with it's own nameserver, go ask him, here is the ip address 
+`gateway.tf` nameserver -> Rdns: Uh-oh, I'm not authoritative for that fqdn, actually `myspecialname` is a subdomain with it's own nameserver, go ask him, here is the ip address
 
 Rdns -> `myspecialname.gateway.tf` nameserver : Hey `myspecialname.gateway.tf`, can you give me the IP address of `www` in your domain ?
 
@@ -312,7 +312,7 @@ The TCP Proxy is special in the sense that it contains 2 parts:
 
 The client-server part seems a bit convoluted, but please bear with me:
 
-The moment you want to expose a service, the grid adds a container in the same user network of the running service container, and starts a proxy, that is also a client towards the tfgateway server.  
+The moment you want to expose a service, the grid adds a container in the same user network of the running service container, and starts a proxy, that is also a client towards the tfgateway server.
 The tfgateway's tcp proxy connects the outside listener with the the proxy client in that addon container, and as such the the proxy in the addon container can forward the queries towards the service.
 
 
@@ -327,7 +327,7 @@ mkdir -p /etc/tcprouter
 
 
 
-cat << EOF > /etc/identity.seed 
+cat << EOF > /etc/identity.seed
 "1.1.0"{"mnemonic":"coral light army gather adapt blossom school alcohol coral light army gather adapt blossom school alcohol coral logic blue tragic danger response sister name","threebotid":2145}
 EOF
 
@@ -338,12 +338,12 @@ EOF
 
 cat << EOF > /etc/coredns/Corefile
 . {
-    log 
+    log
     errors
     redis  {
         address 127.0.0.1:6379
     }
-    forward . 174.138.6.79 8.8.8.8 1.1.1.1  
+    forward . 174.138.6.79 8.8.8.8 1.1.1.1
 }
 
 EOF
@@ -369,16 +369,16 @@ EOF
 cat << EOF > /etc/systemd/system/tfredis.service
 [Unit]
 Description=The Redis server for TFGateway
-After=network.target 
+After=network.target
 
 [Service]
-Type=simple              
+Type=simple
 Environment=statedir=/run/redis
 PIDFile=/run/redis/redis.pid
-ExecStartPre=/bin/touch /var/log/redis.log 
+ExecStartPre=/bin/touch /var/log/redis.log
 ExecStartPre=/bin/mkdir -p /run/redis
 ExecStart=redis-server /etc/tfredis.conf
-ExecReload=/bin/kill -USR2 $MAINPID                          
+ExecReload=/bin/kill -USR2 $MAINPID
 MemoryAccounting=true
 MemoryHigh=800M
 MemoryMax=1G

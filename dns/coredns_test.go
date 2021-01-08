@@ -193,6 +193,12 @@ func TestZoneRecords(t *testing.T) {
 					TTL: 3600,
 				},
 			},
+			RecordTypeTXT: []Record{
+				RecordTXT{
+					Text: "hello world",
+					TTL:  3600,
+				},
+			},
 		},
 	}
 
@@ -221,17 +227,18 @@ func TestDomainDelegate(t *testing.T) {
 
 	mgr := New(pool, "")
 
+	id := "id"
 	user := "user"
 	domain := "my.domain.com"
 
-	err = mgr.AddDomainDelagate(user, domain)
+	err = mgr.AddDomainDelagate(id, user, domain)
 	require.NoError(t, err)
 
 	err = mgr.RemoveDomainDelagate("user2", domain)
 	assert.Error(t, err, "a domain can only be remove by its owner")
 	assert.True(t, errors.Is(err, ErrAuth))
 
-	err = mgr.AddDomainDelagate("user2", domain)
+	err = mgr.AddDomainDelagate(id, "user2", domain)
 	assert.Error(t, err, "a domain cannot be overwritten by another user")
 	assert.True(t, errors.Is(err, ErrAuth))
 
@@ -248,6 +255,7 @@ func TestSubdomain(t *testing.T) {
 	require.NoError(t, err)
 	mgr := New(pool, "")
 
+	id := "id"
 	user := "user"
 	zone := "mydomain.com"
 	domain := fmt.Sprintf("test.%s", zone)
@@ -255,7 +263,7 @@ func TestSubdomain(t *testing.T) {
 		net.ParseIP("10.1.1.10"),
 	}
 
-	err = mgr.AddDomainDelagate(user, zone)
+	err = mgr.AddDomainDelagate(id, user, zone)
 	require.NoError(t, err)
 
 	err = mgr.AddSubdomain(user, domain, ips)
@@ -296,7 +304,7 @@ func TestSubdomainChangeOwner(t *testing.T) {
 	}
 
 	// the gateway manage a domain
-	err = mgr.AddDomainDelagate(gwid, domain)
+	err = mgr.AddDomainDelagate("id", gwid, domain)
 	require.NoError(t, err)
 
 	// a user create a subdomain
@@ -329,7 +337,7 @@ func TestManagedDomain(t *testing.T) {
 	}
 
 	// add the managed domain by the gateway
-	err = mgr.AddDomainDelagate(kp.Identity(), zone)
+	err = mgr.AddDomainDelagate(kp.Identity(), kp.Identity(), zone)
 	require.NoError(t, err)
 
 	// random user add a subomain on the managed domain
