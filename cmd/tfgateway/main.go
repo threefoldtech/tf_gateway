@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/cenkalti/backoff/v3"
+	"github.com/pkg/errors"
 
 	"github.com/shirou/gopsutil/host"
 	"github.com/threefoldtech/tfgateway"
@@ -163,7 +164,7 @@ func run(c *cli.Context) error {
 	for _, domain := range domains {
 		log.Info().Msgf("gateway will manage domain %s", domain)
 		if err := dnsMgr.AddDomainDelagate(kp.Identity(), kp.Identity(), domain); err != nil {
-			return fmt.Errorf("fail to manage domain %s", domain)
+			return errors.Wrapf(err, "fail to manage domain %s", domain)
 		}
 	}
 
