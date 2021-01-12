@@ -328,7 +328,7 @@ mkdir -p /etc/tcprouter
 
 
 cat << EOF > /etc/identity.seed
-"1.1.0"{"mnemonic":"coral light army gather adapt blossom school alcohol coral light army gather adapt blossom school alcohol coral logic blue tragic danger response sister name","threebotid":2145}
+"1.1.0"{"mnemonic":"$$3BOT_WORDS","threebotid":$$3BOT_ID}
 EOF
 
 cat << EOF > /etc/tfredis.conf
