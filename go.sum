@@ -656,6 +656,8 @@ github.com/threefoldtech/zos v0.4.7-rc9.0.0.20201214120726-ece8eec3ee8e h1:5KUDQ
 github.com/threefoldtech/zos v0.4.7-rc9.0.0.20201214120726-ece8eec3ee8e/go.mod h1:5UeekNOvgfdV31yLtf7oOfLR/pN7pxCliyxEIiAzK+M=
 github.com/threefoldtech/zos v0.4.7-rc9.3 h1:TzkA8wgf8kZcHxhvi9cSwa4ZboRg39AcbKI3eGXYBJc=
 github.com/threefoldtech/zos v0.4.7-rc9.3/go.mod h1:o8JvTSg2AiQjXSyTFTsFcaBZY8uU7ItPZhmQQuh9KS4=
+github.com/threefoldtech/zos v0.4.9-0.20210118140854-23f2d049c270 h1:dU+B7EDNfomqpuiaNvxgBzv+3wTEgUHDqgOUoXFoDXU=
+github.com/threefoldtech/zos v0.4.9-0.20210118140854-23f2d049c270/go.mod h1:o8JvTSg2AiQjXSyTFTsFcaBZY8uU7ItPZhmQQuh9KS4=
 github.com/tidwall/pretty v1.0.0 h1:HsD+QiTn7sK6flMKIvNmpqz1qrpP3Ps6jOKIKMooyg4=
 github.com/tidwall/pretty v1.0.0/go.mod h1:XNkn88O1ChpSDQmQeStsy+sBenx6DDtFZJxhVysOjyk=
 github.com/tinylib/msgp v1.1.2/go.mod h1:+d+yLhGm8mzTaHzB+wgMYrodPfmZrzkirds8fDWklFE=

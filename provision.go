@@ -4,12 +4,12 @@ import (
 	"crypto/ed25519"
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"math"
 	"net"
 	"strconv"
 
+	"github.com/rs/zerolog/log"
 	"github.com/threefoldtech/zos/pkg/crypto"
 
 	"github.com/threefoldtech/tfexplorer/client"
@@ -25,7 +25,6 @@ import (
 
 // ErrUnsupportedWorkload is return when a workload of a type not supported by
 // provisiond is received from the explorer
-var ErrUnsupportedWorkload = errors.New("workload type not supported")
 
 // ReservationType enum list all the supported primitives but the tfgateway
 var (
@@ -258,7 +257,9 @@ func WorkloadToProvisionType(w workloads.Workloader) (*provision.Reservation, er
 			return nil, err
 		}
 	default:
-		return nil, fmt.Errorf("%w (%s) (%T)", ErrUnsupportedWorkload, w.GetWorkloadType().String(), w)
+		// unknown reservation type. The engine will still try to process this.
+		log.Error().Str("type", w.GetWorkloadType().String()).Int("id", int(w.GetID())).Msg("unsupported workload type")
+		return reservation, nil
 	}
 
 	reservation.Data, err = json.Marshal(data)
