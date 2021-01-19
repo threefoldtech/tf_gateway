@@ -328,7 +328,7 @@ func (c *Mgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
 		return err
 	}
 	if ownerName != "" && ownerName != user {
-		return errors.Wrapf(ErrAuth, "cannot remove subdomain %s from zone %s", ErrAuth, name, zone)
+		return errors.Wrapf(ErrAuth, "cannot remove subdomain %s from zone %s", name, zone)
 	}
 
 	zr, err := c.getZoneRecords(zone, name)
