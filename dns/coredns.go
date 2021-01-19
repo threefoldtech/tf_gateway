@@ -321,7 +321,7 @@ func (c *Mgr) RemoveSubdomain(user string, domain string, IPs []net.IP) error {
 	}
 
 	// this is now set for both managed domains and delegated domains
-	// if the owner name is not set we still continue (backward compatability)
+	// if the owner name is not set we still continue (backward compatibility)
 	// otherwise we check if it matches the user
 	ownerName, err := c.getSubdomainOwner(domain)
 	if err != nil {
