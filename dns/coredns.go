@@ -27,6 +27,73 @@ func New(pool *redis.Pool, identity string) *Mgr {
 	}
 }
 
+// Cleanup makes sure that currect coredns configuration
+// is optimal by cleaning up not used records
+func (c *Mgr) Cleanup() error {
+	zones, err := c.listCorednsZones()
+	if err != nil {
+		return err
+	}
+
+	for _, zone := range zones {
+		if err := c.cleanUp(zone); err != nil {
+			log.Error().Err(err).Str("zone", zone).Msg("failed to cleanup zone")
+		}
+	}
+
+	return nil
+}
+
+func (c *Mgr) cleanUp(zone string) error {
+	con := c.redis.Get()
+	defer con.Close()
+
+	keys, err := redis.Strings(con.Do("HKEYS", zone))
+	if err != nil {
+		return errors.Wrapf(err, "failed to list keys of zone '%s'", zone)
+	}
+
+	for _, key := range keys {
+		value, err := redis.String(con.Do("HGET", zone, key))
+		if err != nil {
+			log.Error().Err(err).Str("zone", zone).Str("key", key).Msg("failed to get value")
+			continue
+		}
+
+		if len(value) == 0 || value == "{}" {
+			if _, err := con.Do("HDEL", zone, key); err != nil {
+				log.Error().Err(err).Str("zone", zone).Str("key", key).Msg("failed to delete empty key")
+			}
+		}
+	}
+
+	return nil
+}
+
+func (c *Mgr) listCorednsZones() ([]string, error) {
+	con := c.redis.Get()
+	defer con.Close()
+
+	zones, err := redis.Strings(con.Do("KEYS", "*."))
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to list potential coredns zones")
+	}
+
+	result := zones[:0]
+	for _, zone := range zones {
+		typ, err := redis.String(con.Do("TYPE", zone))
+		if err != nil {
+			return nil, errors.Wrapf(err, "failed to get type of redis key '%s'", zone)
+		}
+
+		if typ == "hash" {
+			result = append(result, zone)
+		}
+	}
+
+	return result, nil
+}
+
 func (c *Mgr) getZoneOwner(zone string) (owner ZoneOwner, err error) {
 	zone = strings.TrimSuffix(zone, ".")
 
