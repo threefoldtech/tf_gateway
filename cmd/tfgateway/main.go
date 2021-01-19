@@ -161,6 +161,10 @@ func run(c *cli.Context) error {
 	}
 
 	dnsMgr := dns.New(pool, kp.Identity())
+	if err := dnsMgr.Cleanup(); err != nil {
+		log.Fatal().Err(err).Msg("failed to clean up coredns config")
+	}
+
 	for _, domain := range domains {
 		log.Info().Msgf("gateway will manage domain %s", domain)
 		if err := dnsMgr.AddDomainDelagate(kp.Identity(), kp.Identity(), domain); err != nil {
