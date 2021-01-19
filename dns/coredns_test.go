@@ -282,7 +282,7 @@ func TestSubdomain(t *testing.T) {
 
 	err = mgr.AddSubdomain(user, "sub.thisisnotdelegated.com", ips)
 	assert.Error(t, err)
-	assert.Equal(t, "thisisnotdelegated.com is not managed by the gateway. Delegate the domain first", err.Error())
+	assert.Equal(t, "thisisnotdelegated.com is not managed by the gateway. delegate the domain first", err.Error())
 }
 
 func TestSubdomainChangeOwner(t *testing.T) {
@@ -340,11 +340,11 @@ func TestManagedDomain(t *testing.T) {
 	err = mgr.AddDomainDelagate(kp.Identity(), kp.Identity(), zone)
 	require.NoError(t, err)
 
-	// random user add a subomain on the managed domain
+	// random user add a subdomain on the managed domain
 	err = mgr.AddSubdomain("user1", fmt.Sprintf("user1.%s", zone), ips)
 	require.NoError(t, err)
 
-	// random user add a subomain on the managed domain
+	// random user add a subdomain on the managed domain
 	err = mgr.AddSubdomain("user2", fmt.Sprintf("user2.%s", zone), ips)
 	require.NoError(t, err)
 
@@ -356,5 +356,8 @@ func TestManagedDomain(t *testing.T) {
 
 	ips = append(ips, net.ParseIP("2a02:2788:864:1314:9eb6:d0ff:fe97:764b"))
 	err = mgr.AddSubdomain("user1", fmt.Sprintf("user1.%s", zone), ips)
-	assert.NoError(t, err, "a user can modify the records of its subomain on a manged domain")
+	assert.Error(t, err, "a user cannot overwrite his domain without deletion first")
+
+	err = mgr.AddSubdomain("user1", fmt.Sprintf("user2.%s", zone), ips)
+	assert.NoError(t, err, "any user can reuse a freed subdomain")
 }
