@@ -2,24 +2,19 @@ package tfgateway
 
 import (
 	"github.com/threefoldtech/tfexplorer/models/generated/directory"
-	"github.com/threefoldtech/zos/pkg/provision"
+	"github.com/threefoldtech/zos/pkg/gridtypes"
 	"github.com/threefoldtech/zos/pkg/provision/primitives"
 )
 
 // Counters tracks the amount of primitives workload deployed and
 // the amount of resource unit used
 type Counters struct {
-	proxy          primitives.CounterUint64
-	reverseProxy   primitives.CounterUint64
-	subdomain      primitives.CounterUint64
-	delegateDomain primitives.CounterUint64
+	proxy          primitives.AtomicValue
+	reverseProxy   primitives.AtomicValue
+	subdomain      primitives.AtomicValue
+	delegateDomain primitives.AtomicValue
 
-	NRU primitives.CounterUint64 // network units
-}
-
-// CheckMemoryRequirements implements the provision.Statser interface on the tfgateway Counters.
-func (c *Counters) CheckMemoryRequirements(r *provision.Reservation, totalMemAvailable uint64) error {
-	return nil
+	NRU primitives.AtomicValue // network units
 }
 
 // CurrentWorkloads return the number of each workloads provisioned on the system
@@ -40,16 +35,16 @@ func (c *Counters) CurrentUnits() directory.ResourceAmount {
 }
 
 // Increment is called by the provision.Engine when a reservation has been provisionned
-func (c *Counters) Increment(r *provision.Reservation) error {
+func (c *Counters) Increment(r *gridtypes.Workload) error {
 
 	switch r.Type {
-	case ProxyReservation:
+	case GatewayProxyType:
 		c.proxy.Increment(1)
-	case ReverseProxyReservation:
+	case GatewayReverseProxyType:
 		c.reverseProxy.Increment(1)
-	case SubDomainReservation:
+	case GatewaySubdomainType:
 		c.subdomain.Increment(1)
-	case DomainDeleateReservation:
+	case GatewayDomainDeleateType:
 		c.delegateDomain.Increment(1)
 	}
 
@@ -57,16 +52,16 @@ func (c *Counters) Increment(r *provision.Reservation) error {
 }
 
 // Decrement is called by the provision.Engine when a reservation has been decommissioned
-func (c *Counters) Decrement(r *provision.Reservation) error {
+func (c *Counters) Decrement(r *gridtypes.Workload) error {
 
 	switch r.Type {
-	case ProxyReservation:
+	case GatewayProxyType:
 		c.proxy.Decrement(1)
-	case ReverseProxyReservation:
+	case GatewayReverseProxyType:
 		c.reverseProxy.Decrement(1)
-	case SubDomainReservation:
+	case GatewaySubdomainType:
 		c.subdomain.Decrement(1)
-	case DomainDeleateReservation:
+	case GatewayDomainDeleateType:
 		c.delegateDomain.Decrement(1)
 	}
 

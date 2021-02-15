@@ -4,32 +4,27 @@ import (
 	"context"
 	"encoding/json"
 
-	"github.com/threefoldtech/zos/pkg/provision"
+	"github.com/threefoldtech/zos/pkg/gridtypes"
 
 	"github.com/rs/zerolog/log"
 )
 
-// Delegate is the primitives that allow a user to delegate a or part of a domain to us
-type Delegate struct {
-	Domain string `json:"domain"`
-}
-
-func (p *Provisioner) domainDeleateProvision(ctx context.Context, r *provision.Reservation) (interface{}, error) {
-	data := Delegate{}
-	if err := json.Unmarshal(r.Data, &data); err != nil {
+func (p *Provisioner) domainDeleateProvision(ctx context.Context, wl *gridtypes.Workload) (interface{}, error) {
+	data := GatewayDelegate{}
+	if err := json.Unmarshal(wl.Data, &data); err != nil {
 		return nil, err
 	}
-	log.Info().Str("id", r.ID).Msgf("provision Delegate %+v", data)
+	log.Info().Stringer("id", wl.ID).Msgf("provision Delegate %+v", data)
 
-	return nil, p.dns.AddDomainDelagate(r.NodeID, r.User, data.Domain)
+	return nil, p.dns.AddDomainDelagate(p.kp.Identity(), wl.User.String(), data.Domain)
 }
 
-func (p *Provisioner) domainDeleateDecomission(ctx context.Context, r *provision.Reservation) error {
-	data := Delegate{}
-	if err := json.Unmarshal(r.Data, &data); err != nil {
+func (p *Provisioner) domainDeleateDecomission(ctx context.Context, wl *gridtypes.Workload) error {
+	data := GatewayDelegate{}
+	if err := json.Unmarshal(wl.Data, &data); err != nil {
 		return err
 	}
-	log.Info().Str("id", r.ID).Msgf("decomission Delegate %+v", data)
+	log.Info().Stringer("id", wl.ID).Msgf("decomission Delegate %+v", data)
 
-	return p.dns.RemoveDomainDelagate(r.User, data.Domain)
+	return p.dns.RemoveDomainDelagate(wl.User.String(), data.Domain)
 }
