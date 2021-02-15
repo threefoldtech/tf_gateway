@@ -44,7 +44,7 @@ func (c *Counters) Increment(r *gridtypes.Workload) error {
 		c.reverseProxy.Increment(1)
 	case GatewaySubdomainType:
 		c.subdomain.Increment(1)
-	case GatewayDomainDeleateType:
+	case GatewayDomainDelegateType:
 		c.delegateDomain.Increment(1)
 	}
 
@@ -61,7 +61,7 @@ func (c *Counters) Decrement(r *gridtypes.Workload) error {
 		c.reverseProxy.Decrement(1)
 	case GatewaySubdomainType:
 		c.subdomain.Decrement(1)
-	case GatewayDomainDeleateType:
+	case GatewayDomainDelegateType:
 		c.delegateDomain.Decrement(1)
 	}
 

@@ -45,17 +45,17 @@ func NewProvisioner(proxy *proxy.Mgr, dns *dns.Mgr, wg *wg.Mgr, kp identity.KeyP
 		wg:    wg,
 	}
 	provisioners := map[gridtypes.WorkloadType]provision.DeployFunction{
-		GatewayProxyType:         p.proxyProvision,
-		GatewayReverseProxyType:  p.reverseProxyProvision,
-		GatewaySubdomainType:     p.subDomainProvision,
-		GatewayDomainDeleateType: p.domainDeleateProvision,
+		GatewayProxyType:          p.proxyProvision,
+		GatewayReverseProxyType:   p.reverseProxyProvision,
+		GatewaySubdomainType:      p.subDomainProvision,
+		GatewayDomainDelegateType: p.domainDeleateProvision,
 	}
 
 	decommissioners := map[gridtypes.WorkloadType]provision.RemoveFunction{
-		GatewayProxyType:         p.proxyDecomission,
-		GatewayReverseProxyType:  p.reverseProxyDecomission,
-		GatewaySubdomainType:     p.subDomainDecomission,
-		GatewayDomainDeleateType: p.domainDeleateDecomission,
+		GatewayProxyType:          p.proxyDecomission,
+		GatewayReverseProxyType:   p.reverseProxyDecomission,
+		GatewaySubdomainType:      p.subDomainDecomission,
+		GatewayDomainDelegateType: p.domainDeleateDecomission,
 	}
 
 	if wg != nil {
