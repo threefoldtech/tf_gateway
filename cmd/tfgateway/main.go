@@ -225,6 +225,7 @@ func run(c *cli.Context) error {
 		if err := engine.Run(ctx); err != nil && err != context.Canceled {
 			log.Fatal().Err(err).Msg("unexpected error")
 		}
+		log.Info().Msg("provision engine stopped")
 	}()
 
 	httpServer, err := getHTTPServer(engine)
@@ -234,7 +235,6 @@ func run(c *cli.Context) error {
 
 	httpServer.Addr = c.String("http")
 	utils.OnDone(ctx, func(_ error) {
-		log.Info().Msg("shutting down")
 		httpServer.Close()
 	})
 
@@ -242,7 +242,6 @@ func run(c *cli.Context) error {
 		return errors.Wrap(err, "http api exited unexpectedely")
 	}
 
-	log.Info().Msg("provision engine stopped")
 	return nil
 }
 
