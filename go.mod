@@ -6,16 +6,13 @@ require (
 	github.com/alicebob/miniredis/v2 v2.11.4
 	github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496
 	github.com/containernetworking/plugins v0.8.4
-	github.com/dave/jennifer v1.4.0 // indirect
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
 	github.com/gorilla/mux v1.8.0
-	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.19.0
 	github.com/rusart/muxprom v0.0.0-20200323164249-36ea051efbe6
 	github.com/shirou/gopsutil v2.20.6+incompatible // indirect
-	github.com/sirupsen/logrus v1.6.0 // indirect
 	github.com/stretchr/testify v1.6.1
 	github.com/threefoldtech/zos v0.4.9-0.20210118140854-23f2d049c270
 	github.com/urfave/cli/v2 v2.3.0
