@@ -21,7 +21,6 @@ import (
 	"github.com/threefoldtech/zos/pkg/provision"
 	"github.com/threefoldtech/zos/pkg/provision/api"
 	"github.com/threefoldtech/zos/pkg/provision/storage"
-	"github.com/threefoldtech/zos/pkg/provision/substrate"
 	"github.com/threefoldtech/zos/pkg/utils"
 	"github.com/threefoldtech/zos/pkg/version"
 
@@ -29,8 +28,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/threefoldtech/tfexplorer/client"
-	"github.com/threefoldtech/tfexplorer/models/generated/directory"
 	"github.com/threefoldtech/zos/pkg/identity"
 	"github.com/urfave/cli/v2"
 )
@@ -61,6 +58,21 @@ var appCLI = cli.App{
 		&cli.Int64Flag{
 			Name:  "farm",
 			Usage: "The farm ID of the tfgateway",
+		},
+		&cli.StringFlag{
+			Name:     "farm-secret",
+			Usage:    "The farm secret to join the farm",
+			Required: true,
+		},
+		&cli.StringFlag{
+			Name:  "storage",
+			Usage: "Storage path for workload files",
+			Value: "/var/cache/gateway",
+		},
+		&cli.StringFlag{
+			Name:  "substrate",
+			Usage: "url to substrate",
+			Value: "wss://tfgrid.tri-fold.com", //TODO: this should change to production substrate
 		},
 		&cli.StringSliceFlag{
 			Name:  "nameservers",
@@ -183,9 +195,15 @@ func run(c *cli.Context) error {
 			}
 		}()
 	}
+	storagePath := c.String("storage")
+	if err := os.MkdirAll(storagePath, 0755); err != nil {
+		return errors.Wrap(err, "failed to create storage directory")
+	}
 
-	storage, err := storage.NewFSStore("/")
-	users, err := substrate.NewSubstrateUsers("ws://<ip>")
+	substrateURL := c.String("substrate")
+	storage, err := storage.NewFSStore(storagePath)
+	users, err := provision.NewSubstrateUsers(substrateURL)
+
 	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dnsMgr, wgMgr, kp)
 	engine := provision.New(
 		storage,
@@ -233,7 +251,7 @@ func getHTTPServer(engine provision.Engine) (*http.Server, error) {
 
 	prom := muxprom.New(
 		muxprom.Router(router),
-		muxprom.Namespace("provision"),
+		muxprom.Namespace("gateway"),
 	)
 	prom.Instrument()
 
@@ -245,15 +263,8 @@ func getHTTPServer(engine provision.Engine) (*http.Server, error) {
 	}
 
 	return &http.Server{
-		Handler: v1,
+		Handler: router,
 	}, nil
-}
-
-func registerID(gw directory.Gateway, expl *client.Client) func() error {
-	return func() error {
-		log.Info().Str("ID", gw.NodeId).Msg("trying to register to the explorer")
-		return expl.Directory.GatewayRegister(gw)
-	}
 }
 
 func ensureID(seed string) (kp identity.KeyPair, err error) {
