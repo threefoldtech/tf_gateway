@@ -21,6 +21,7 @@ import (
 	"github.com/threefoldtech/zos/pkg/provision"
 	"github.com/threefoldtech/zos/pkg/provision/api"
 	"github.com/threefoldtech/zos/pkg/provision/storage"
+	"github.com/threefoldtech/zos/pkg/substrate"
 	"github.com/threefoldtech/zos/pkg/utils"
 	"github.com/threefoldtech/zos/pkg/version"
 
@@ -202,7 +203,7 @@ func run(c *cli.Context) error {
 
 	substrateURL := c.String("substrate")
 	storage, err := storage.NewFSStore(storagePath)
-	users, err := provision.NewSubstrateUsers(substrateURL)
+	users, err := substrate.NewSubstrateUsers(substrateURL)
 
 	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dnsMgr, wgMgr, kp)
 	engine := provision.New(

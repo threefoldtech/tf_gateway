@@ -18,6 +18,7 @@ require (
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20200520041808-52d707b772fe // indirect
+	github.com/zaibon/httpsig v0.0.0-20210219100301-931cc471f406 // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20191219145116-fa6499c8e75f
 	google.golang.org/protobuf v1.25.0 // indirect
 )
