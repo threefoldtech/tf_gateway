@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"net/http"
 	"os"
+	"path/filepath"
 
 	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
@@ -56,7 +57,7 @@ var appCLI = cli.App{
 			Name:  "debug",
 			Usage: "enable debug logging",
 		},
-		&cli.Int64Flag{
+		&cli.Uint64Flag{
 			Name:  "farm",
 			Usage: "The farm ID of the tfgateway",
 		},
@@ -68,12 +69,20 @@ var appCLI = cli.App{
 		&cli.StringFlag{
 			Name:  "storage",
 			Usage: "Storage path for workload files",
-			Value: "/var/cache/gateway",
+			Value: func() string {
+				home, err := os.UserHomeDir()
+				if err != nil {
+					log.Error().Err(err).Msg("failed to get homedir.")
+					return "/var/cache/gateway"
+				}
+
+				return filepath.Join(home, ".gateway", "workloads")
+			}(),
 		},
 		&cli.StringFlag{
 			Name:  "substrate",
 			Usage: "url to substrate",
-			Value: "wss://tfgrid.tri-fold.com", //TODO: this should change to production substrate
+			Value: "wss://explorer.devnet.grid.tf/ws",
 		},
 		&cli.StringSliceFlag{
 			Name:  "nameservers",
@@ -201,9 +210,21 @@ func run(c *cli.Context) error {
 		return errors.Wrap(err, "failed to create storage directory")
 	}
 
+	farmerID := c.Uint64("farm")
 	substrateURL := c.String("substrate")
 	storage, err := storage.NewFSStore(storagePath)
 	users, err := substrate.NewSubstrateUsers(substrateURL)
+
+	ctx := context.Background()
+
+	ctx, _ = utils.WithSignal(ctx)
+	utils.OnDone(ctx, func(_ error) {
+		log.Info().Msg("shutting down")
+	})
+
+	if err := registration(ctx, kp.Identity(), substrateURL, uint32(farmerID)); err != nil {
+		return errors.Wrap(err, "failed to register gateway")
+	}
 
 	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dnsMgr, wgMgr, kp)
 	engine := provision.New(
@@ -214,13 +235,6 @@ func run(c *cli.Context) error {
 	)
 
 	log.Info().Str("identity", kp.Identity()).Msg("starting gateway")
-
-	ctx := context.Background()
-
-	ctx, _ = utils.WithSignal(ctx)
-	utils.OnDone(ctx, func(_ error) {
-		log.Info().Msg("shutting down")
-	})
 
 	go func() {
 		if err := engine.Run(ctx); err != nil && err != context.Canceled {

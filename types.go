@@ -74,6 +74,11 @@ func (g GatewayProxy) Challenge(w io.Writer) error {
 	return nil
 }
 
+// Capacity implements WorkloadData
+func (g GatewayProxy) Capacity() (cap gridtypes.Capacity, err error) {
+	return
+}
+
 var _ gridtypes.WorkloadData = GatewayReverseProxy{}
 
 // GatewayReverseProxy type
@@ -93,6 +98,11 @@ func (g GatewayReverseProxy) Valid() error {
 	}
 
 	return nil
+}
+
+// Capacity implements WorkloadData
+func (g GatewayReverseProxy) Capacity() (cap gridtypes.Capacity, err error) {
+	return
 }
 
 //Challenge implementation
@@ -135,6 +145,11 @@ func (s GatewaySubdomain) Challenge(b io.Writer) error {
 	return nil
 }
 
+// Capacity implements WorkloadData
+func (s GatewaySubdomain) Capacity() (cap gridtypes.Capacity, err error) {
+	return
+}
+
 var _ gridtypes.WorkloadData = GatewayDelegate{}
 
 // GatewayDelegate type
@@ -157,6 +172,11 @@ func (d GatewayDelegate) Challenge(w io.Writer) error {
 	return nil
 }
 
+// Capacity implements WorkloadData
+func (d GatewayDelegate) Capacity() (cap gridtypes.Capacity, err error) {
+	return
+}
+
 var _ gridtypes.WorkloadData = Gateway4To6{}
 
 // Gateway4To6 type
@@ -176,6 +196,11 @@ func (g Gateway4To6) Challenge(b io.Writer) error {
 	}
 
 	return nil
+}
+
+// Capacity implements WorkloadData
+func (g Gateway4To6) Capacity() (cap gridtypes.Capacity, err error) {
+	return
 }
 
 // Gateway4to6Result contains the configuration required by the user to
