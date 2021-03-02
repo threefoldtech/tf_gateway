@@ -2,6 +2,7 @@ package tfgateway
 
 import (
 	"context"
+	"crypto/ed25519"
 	"encoding/hex"
 	"fmt"
 
@@ -79,12 +80,13 @@ func (p *Provisioner) decryptSecret(ctx context.Context, user gridtypes.ID, secr
 	}
 
 	var (
-		out []byte
+		out        []byte
+		userPubKey ed25519.PublicKey
 	)
 	// now only one version is supported
 	switch version {
 	default:
-		userPubKey, err := engine.Users().GetKey(user)
+		userPubKey, err = engine.Users().GetKey(user)
 		if err != nil || userPubKey == nil {
 			return "", fmt.Errorf("failed to retrieve user %s public key: %s", user, err)
 		}

@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/ed25519"
 	"fmt"
 	"net/http"
 	"os"
@@ -18,7 +17,6 @@ import (
 	"github.com/threefoldtech/tfgateway/redis"
 	"github.com/threefoldtech/tfgateway/wg"
 	"github.com/threefoldtech/zos/pkg/app"
-	"github.com/threefoldtech/zos/pkg/crypto"
 	"github.com/threefoldtech/zos/pkg/provision"
 	"github.com/threefoldtech/zos/pkg/provision/api"
 	"github.com/threefoldtech/zos/pkg/provision/storage"
@@ -213,7 +211,13 @@ func run(c *cli.Context) error {
 	farmerID := c.Uint64("farm")
 	substrateURL := c.String("substrate")
 	storage, err := storage.NewFSStore(storagePath)
+	if err != nil {
+		return errors.Wrap(err, "failed to create storage")
+	}
 	users, err := substrate.NewSubstrateUsers(substrateURL)
+	if err != nil {
+		return errors.Wrap(err, "failed to create users database")
+	}
 
 	ctx := context.Background()
 
@@ -301,22 +305,6 @@ func ensureID(seed string) (kp identity.KeyPair, err error) {
 	}
 
 	return kp, nil
-}
-
-type gwIdentity struct {
-	kp identity.KeyPair
-}
-
-func (n gwIdentity) PrivateKey() ed25519.PrivateKey {
-	return n.kp.PrivateKey
-}
-
-func (n gwIdentity) Identity() string {
-	return n.kp.Identity()
-}
-
-func (n gwIdentity) Sign(b []byte) ([]byte, error) {
-	return crypto.Sign(n.kp.PrivateKey, b)
 }
 
 func is4To6Enabled(c *cli.Context) bool {
