@@ -222,6 +222,10 @@ func run(c *cli.Context) error {
 		log.Info().Msg("shutting down")
 	})
 
+	if err := ygg(ctx, kp.PrivateKey); err != nil {
+		return errors.Wrap(err, "failed to start yggdrasil")
+	}
+
 	if err := registration(ctx, kp.Identity(), substrateURL, uint32(farmerID)); err != nil {
 		return errors.Wrap(err, "failed to register gateway")
 	}
