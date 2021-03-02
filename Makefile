@@ -58,4 +58,4 @@ testrace: verifiers build
 	go test -v -vet=off -race ./...
 
 build:
-	cd cmd/tfgateway && CGO_ENABLED=0 go build -ldflags $(ldflags) -o $(OUT)/tfgateway
+	cd cmd/tfgateway && CGO_ENABLED=1 go build -ldflags $(ldflags) -o $(OUT)/tfgateway

@@ -2,27 +2,25 @@ package main
 
 import (
 	"context"
-	"crypto/ed25519"
-	"encoding/hex"
 	"fmt"
+	"net/http"
 	"os"
-	"time"
+	"path/filepath"
 
-	"github.com/cenkalti/backoff/v3"
+	"github.com/gorilla/mux"
 	"github.com/pkg/errors"
+	"github.com/rusart/muxprom"
 
-	"github.com/shirou/gopsutil/host"
 	"github.com/threefoldtech/tfgateway"
-	"github.com/threefoldtech/tfgateway/cache"
 	"github.com/threefoldtech/tfgateway/dns"
 	"github.com/threefoldtech/tfgateway/proxy"
 	"github.com/threefoldtech/tfgateway/redis"
 	"github.com/threefoldtech/tfgateway/wg"
 	"github.com/threefoldtech/zos/pkg/app"
-	"github.com/threefoldtech/zos/pkg/crypto"
-	"github.com/threefoldtech/zos/pkg/geoip"
 	"github.com/threefoldtech/zos/pkg/provision"
-	"github.com/threefoldtech/zos/pkg/provision/explorer"
+	"github.com/threefoldtech/zos/pkg/provision/api"
+	"github.com/threefoldtech/zos/pkg/provision/storage"
+	"github.com/threefoldtech/zos/pkg/substrate"
 	"github.com/threefoldtech/zos/pkg/utils"
 	"github.com/threefoldtech/zos/pkg/version"
 
@@ -30,8 +28,6 @@ import (
 	"github.com/rs/zerolog/log"
 
 	"github.com/asaskevich/govalidator"
-	"github.com/threefoldtech/tfexplorer/client"
-	"github.com/threefoldtech/tfexplorer/models/generated/directory"
 	"github.com/threefoldtech/zos/pkg/identity"
 	"github.com/urfave/cli/v2"
 )
@@ -46,9 +42,9 @@ var appCLI = cli.App{
 			Usage: "path to the file containing the identity seed",
 		},
 		&cli.StringFlag{
-			Name:  "explorer",
-			Value: "https://explorer.grid.tf/api/v1",
-			Usage: "URL to the explorer API used to poll reservations",
+			Name:  "http",
+			Usage: "http listen address",
+			Value: ":2021",
 		},
 		&cli.StringFlag{
 			Name:  "redis",
@@ -59,9 +55,32 @@ var appCLI = cli.App{
 			Name:  "debug",
 			Usage: "enable debug logging",
 		},
-		&cli.Int64Flag{
+		&cli.Uint64Flag{
 			Name:  "farm",
 			Usage: "The farm ID of the tfgateway",
+		},
+		&cli.StringFlag{
+			Name:     "farm-secret",
+			Usage:    "The farm secret to join the farm",
+			Required: true,
+		},
+		&cli.StringFlag{
+			Name:  "storage",
+			Usage: "Storage path for workload files",
+			Value: func() string {
+				home, err := os.UserHomeDir()
+				if err != nil {
+					log.Error().Err(err).Msg("failed to get homedir.")
+					return "/var/cache/gateway"
+				}
+
+				return filepath.Join(home, ".gateway", "workloads")
+			}(),
+		},
+		&cli.StringFlag{
+			Name:  "substrate",
+			Usage: "url to substrate",
+			Value: "wss://explorer.devnet.grid.tf/ws",
 		},
 		&cli.StringSliceFlag{
 			Name:  "nameservers",
@@ -134,22 +153,6 @@ func run(c *cli.Context) error {
 		return err
 	}
 
-	staster := &tfgateway.Counters{}
-	localStore := cache.NewRedis(pool)
-	if err := localStore.Sync(staster); err != nil {
-		return fmt.Errorf("failed to sync statser with reservation from cache: %w", err)
-	}
-
-	wgID := gwIdentity{kp}
-	e, err := client.NewClient(c.String("explorer"), wgID)
-	if err != nil {
-		return fmt.Errorf("failed to instantiate explorer client: %w", err)
-	}
-
-	loc, err := geoip.Fetch()
-	if err != nil {
-		return fmt.Errorf("failed to fetch location: %w", err)
-	}
 	domains := c.StringSlice("domains")
 	nameservers := c.StringSlice("nameservers")
 	if !validDomains(domains) {
@@ -172,40 +175,13 @@ func run(c *cli.Context) error {
 		}
 	}
 
-	gw := directory.Gateway{
-		NodeId:       kp.Identity(),
-		FarmId:       c.Int64("farm"),
-		PublicKeyHex: hex.EncodeToString(kp.PublicKey),
-		OsVersion:    version.Current().Short(),
-		Location: directory.Location{
-			Continent: loc.Continent,
-			Country:   loc.Country,
-			City:      loc.City,
-			Longitude: loc.Longitute,
-			Latitude:  loc.Latitude,
-		},
-		ManagedDomains: domains,
-		DnsNameserver:  nameservers,
-		TcpRouterPort:  c.Int64("tcp-client-port"),
-		FreeToUse:      c.Bool("free"),
-	}
-
-	bo := backoff.NewExponentialBackOff()
-	bo.MaxElapsedTime = 1 * time.Minute
-	bo.MaxInterval = 2 * time.Second
-	if err := backoff.RetryNotify(registerID(gw, e), bo, func(e error, d time.Duration) {
-		log.Err(e).Dur("sleep", d).Msg("failed to register to explorer")
-	}); err != nil {
-		return fmt.Errorf("failed to register gateway in the explorer: %w", err)
-	}
-
 	var wgMgr *wg.Mgr
 	if is4To6Enabled(c) {
-		// the Gateway4To6 workloads doesn't not survice gateway restart, so we clear all reservations from the
-		// cache so they are always re-provisionned
-		if err := localStore.ClearByType([]provision.ReservationType{tfgateway.Gateway4To6Reservation}); err != nil {
-			return err
-		}
+		// // the Gateway4To6 workloads doesn't not survice gateway restart, so we clear all reservations from the
+		// // cache so they are always re-provisionned
+		// if err := localStore.ClearByType([]provision.ReservationType{tfgateway.Gateway4To6Type}); err != nil {
+		// 	return err
+		// }
 
 		var (
 			endpoint = c.String("endpoint")
@@ -227,52 +203,90 @@ func run(c *cli.Context) error {
 			}
 		}()
 	}
-
-	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dnsMgr, wgMgr, kp, e)
-
-	engine, err := provision.New(provision.EngineOps{
-		NodeID: kp.Identity(),
-		Cache:  localStore,
-		Source: provision.CombinedSource(
-			provision.PollSource(explorer.NewPoller(e, tfgateway.WorkloadToProvisionType, tfgateway.ProvisionOrder), kp),
-			provision.NewDecommissionSource(localStore),
-		),
-		Provisioners:   provisioner.Provisioners,
-		Decomissioners: provisioner.Decommissioners,
-		Feedback:       tfgateway.NewFeedback(e, tfgateway.ResultToSchemaType),
-		Signer:         wgID,
-		Statser:        staster,
-	})
-	if err != nil {
-		return fmt.Errorf("failed to provision the engine: %w", err)
+	storagePath := c.String("storage")
+	if err := os.MkdirAll(storagePath, 0755); err != nil {
+		return errors.Wrap(err, "failed to create storage directory")
 	}
 
-	log.Info().Str("identity", kp.Identity()).Msg("starting gateway")
+	farmerID := c.Uint64("farm")
+	substrateURL := c.String("substrate")
+	storage, err := storage.NewFSStore(storagePath)
+	if err != nil {
+		return errors.Wrap(err, "failed to create storage")
+	}
+	users, err := substrate.NewSubstrateUsers(substrateURL)
+	if err != nil {
+		return errors.Wrap(err, "failed to create users database")
+	}
 
 	ctx := context.Background()
-
-	(&uptimeTicker{
-		nodeID:   kp.Identity(),
-		explorer: e,
-	}).Start(ctx)
 
 	ctx, _ = utils.WithSignal(ctx)
 	utils.OnDone(ctx, func(_ error) {
 		log.Info().Msg("shutting down")
 	})
 
-	if err := engine.Run(ctx); err != nil {
-		log.Error().Err(err).Msg("unexpected error")
+	if err := ygg(ctx, kp.PrivateKey); err != nil {
+		return errors.Wrap(err, "failed to start yggdrasil")
 	}
-	log.Info().Msg("provision engine stopped")
+
+	if err := registration(ctx, kp.Identity(), substrateURL, uint32(farmerID)); err != nil {
+		return errors.Wrap(err, "failed to register gateway")
+	}
+
+	provisioner := tfgateway.NewProvisioner(proxy.New(pool), dnsMgr, wgMgr, kp)
+	engine := provision.New(
+		storage,
+		provisioner,
+		provision.WithUsers(users),
+		tfgateway.Order,
+	)
+
+	log.Info().Str("identity", kp.Identity()).Msg("starting gateway")
+
+	go func() {
+		if err := engine.Run(ctx); err != nil && err != context.Canceled {
+			log.Fatal().Err(err).Msg("unexpected error")
+		}
+		log.Info().Msg("provision engine stopped")
+	}()
+
+	httpServer, err := getHTTPServer(engine)
+	if err != nil {
+		return errors.Wrap(err, "failed to create http server")
+	}
+
+	httpServer.Addr = c.String("http")
+	utils.OnDone(ctx, func(_ error) {
+		httpServer.Close()
+	})
+
+	if err := httpServer.ListenAndServe(); err != nil && err != http.ErrServerClosed {
+		return errors.Wrap(err, "http api exited unexpectedely")
+	}
+
 	return nil
 }
 
-func registerID(gw directory.Gateway, expl *client.Client) func() error {
-	return func() error {
-		log.Info().Str("ID", gw.NodeId).Msg("trying to register to the explorer")
-		return expl.Directory.GatewayRegister(gw)
+func getHTTPServer(engine provision.Engine) (*http.Server, error) {
+	router := mux.NewRouter().StrictSlash(true)
+
+	prom := muxprom.New(
+		muxprom.Router(router),
+		muxprom.Namespace("gateway"),
+	)
+	prom.Instrument()
+
+	v1 := router.PathPrefix("/api/v1").Subrouter()
+
+	_, err := api.NewWorkloadsAPI(v1, engine)
+	if err != nil {
+		return nil, errors.Wrap(err, "failed to setup workload api")
 	}
+
+	return &http.Server{
+		Handler: router,
+	}, nil
 }
 
 func ensureID(seed string) (kp identity.KeyPair, err error) {
@@ -291,71 +305,6 @@ func ensureID(seed string) (kp identity.KeyPair, err error) {
 	}
 
 	return kp, nil
-}
-
-type gwIdentity struct {
-	kp identity.KeyPair
-}
-
-func (n gwIdentity) PrivateKey() ed25519.PrivateKey {
-	return n.kp.PrivateKey
-}
-
-func (n gwIdentity) Identity() string {
-	return n.kp.Identity()
-}
-
-func (n gwIdentity) Sign(b []byte) ([]byte, error) {
-	return crypto.Sign(n.kp.PrivateKey, b)
-}
-
-type uptimeTicker struct {
-	nodeID   string
-	explorer *client.Client
-}
-
-// Uptime returns the uptime of the node
-func (u *uptimeTicker) uptime() (uint64, error) {
-	info, err := host.Info()
-	if err != nil {
-		return 0, err
-	}
-	return info.Uptime, nil
-}
-
-func (u *uptimeTicker) Start(ctx context.Context) {
-	sendUptime := func() error {
-		uptime, err := u.uptime()
-		if err != nil {
-			log.Error().Err(err).Msgf("failed to read uptime")
-			return err
-		}
-
-		log.Info().Msg("send heart-beat to BCDB")
-		if err := u.explorer.Directory.GatewayUpdateUptime(u.nodeID, uptime); err != nil {
-			log.Error().Err(err).Msgf("failed to send heart-beat to BCDB")
-			return err
-		}
-		return nil
-	}
-
-	_ = backoff.Retry(sendUptime, backoff.NewExponentialBackOff())
-
-	tick := time.NewTicker(time.Minute * 10)
-
-	go func() {
-		defer tick.Stop()
-
-		for {
-			select {
-			case <-tick.C:
-				backoff.Retry(sendUptime, backoff.NewExponentialBackOff())
-			case <-ctx.Done():
-				return
-			}
-		}
-	}()
-
 }
 
 func is4To6Enabled(c *cli.Context) bool {

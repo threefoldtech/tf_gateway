@@ -3,43 +3,26 @@ module github.com/threefoldtech/tfgateway
 go 1.14
 
 require (
-	github.com/Microsoft/hcsshim v0.8.9 // indirect
 	github.com/alicebob/miniredis/v2 v2.11.4
 	github.com/asaskevich/govalidator v0.0.0-20200108200545-475eaeb16496
 	github.com/cenkalti/backoff/v3 v3.2.2
-	github.com/containerd/cgroups v0.0.0-20200710171044-318312a37340 // indirect
-	github.com/containerd/continuity v0.0.0-20200710164510-efbc4488d8fe // indirect
-	github.com/containerd/fifo v0.0.0-20200410184934-f15a3290365b // indirect
-	github.com/containerd/ttrpc v1.0.1 // indirect
-	github.com/containerd/typeurl v1.0.1 // indirect
 	github.com/containernetworking/plugins v0.8.4
-	github.com/dave/jennifer v1.4.0 // indirect
-	github.com/gogo/googleapis v1.4.0 // indirect
-	github.com/golang/groupcache v0.0.0-20200121045136-8c9f03a8e57e // indirect
-	github.com/golang/protobuf v1.4.2 // indirect
 	github.com/gomodule/redigo v2.0.0+incompatible
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510 // indirect
-	github.com/iancoleman/strcase v0.0.0-20191112232945-16388991a334 // indirect
-	github.com/onsi/ginkgo v1.11.0 // indirect
-	github.com/opencontainers/go-digest v1.0.0 // indirect
-	github.com/opencontainers/selinux v1.6.0 // indirect
+	github.com/gorilla/mux v1.8.0
+	github.com/mdlayher/genetlink v1.0.0 // indirect
 	github.com/pkg/errors v0.9.1
 	github.com/rs/zerolog v1.19.0
-	github.com/shirou/gopsutil v2.20.6+incompatible
+	github.com/rusart/muxprom v0.0.0-20200323164249-36ea051efbe6
+	github.com/shirou/gopsutil v2.20.6+incompatible // indirect
 	github.com/stretchr/testify v1.6.1
-	github.com/threefoldtech/tfexplorer v0.4.8-0.20201218110633-b1b2cd7b4975
-	github.com/threefoldtech/zos v0.4.9-0.20210118140854-23f2d049c270
-	github.com/urfave/cli/v2 v2.2.0
+	github.com/threefoldtech/zos v0.4.10-0.20210302103908-b4908dc5812b
+	github.com/urfave/cli/v2 v2.3.0
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20200520041808-52d707b772fe // indirect
-	go.opencensus.io v0.22.4 // indirect
-	golang.org/x/net v0.0.0-20200707034311-ab3426394381 // indirect
-	golang.org/x/sync v0.0.0-20200625203802-6e8e738ad208 // indirect
-	golang.org/x/time v0.0.0-20200630173020-3af7569d3a1e // indirect
 	golang.zx2c4.com/wireguard/wgctrl v0.0.0-20191219145116-fa6499c8e75f
-	google.golang.org/genproto v0.0.0-20200728010541-3dc8dca74b7b // indirect
-	google.golang.org/grpc v1.30.0 // indirect
 	google.golang.org/protobuf v1.25.0 // indirect
+	honnef.co/go/tools v0.1.2 // indirect
 )
 
 replace github.com/docker/distribution v2.7.1+incompatible => github.com/docker/distribution v2.7.1-0.20190205005809-0d3efadf0154+incompatible
