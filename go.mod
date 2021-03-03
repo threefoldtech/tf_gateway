@@ -16,7 +16,7 @@ require (
 	github.com/rusart/muxprom v0.0.0-20200323164249-36ea051efbe6
 	github.com/shirou/gopsutil v2.20.6+incompatible // indirect
 	github.com/stretchr/testify v1.6.1
-	github.com/threefoldtech/zos v0.4.10-0.20210302103908-b4908dc5812b
+	github.com/threefoldtech/zos v0.4.10-0.20210303125430-f9f2eefeb7ab
 	github.com/urfave/cli/v2 v2.3.0
 	github.com/vishvananda/netlink v1.1.0
 	github.com/vishvananda/netns v0.0.0-20200520041808-52d707b772fe // indirect
