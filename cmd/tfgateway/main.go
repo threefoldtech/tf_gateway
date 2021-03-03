@@ -90,11 +90,6 @@ var appCLI = cli.App{
 			Name:  "domains",
 			Usage: "list of domain managed by this TFGateway. User can create free subdomain of any domain managed by TFGateway",
 		},
-		&cli.Int64Flag{
-			Name:  "tcp-client-port",
-			Usage: "the listening port on which the TCP router client needs to connect to in order to initiate a reverse tunnel",
-			Value: 18000,
-		},
 		&cli.StringFlag{
 			Name:  "endpoint",
 			Usage: "listening address of the wireguard interface, format: host:port",
@@ -251,7 +246,12 @@ func run(c *cli.Context) error {
 		log.Info().Msg("provision engine stopped")
 	}()
 
-	httpServer, err := getHTTPServer(engine)
+	info := GatewayInfo{
+		Nameservers:    nameservers,
+		ManagedDomains: domains,
+	}
+
+	httpServer, err := getHTTPServer(engine, info)
 	if err != nil {
 		return errors.Wrap(err, "failed to create http server")
 	}
@@ -268,7 +268,7 @@ func run(c *cli.Context) error {
 	return nil
 }
 
-func getHTTPServer(engine provision.Engine) (*http.Server, error) {
+func getHTTPServer(engine provision.Engine, info GatewayInfo) (*http.Server, error) {
 	router := mux.NewRouter().StrictSlash(true)
 
 	prom := muxprom.New(
@@ -279,6 +279,9 @@ func getHTTPServer(engine provision.Engine) (*http.Server, error) {
 
 	v1 := router.PathPrefix("/api/v1").Subrouter()
 
+	if err := NewInfoAPI(v1, info); err != nil {
+		return nil, err
+	}
 	_, err := api.NewWorkloadsAPI(v1, engine)
 	if err != nil {
 		return nil, errors.Wrap(err, "failed to setup workload api")

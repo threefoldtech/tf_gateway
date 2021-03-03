@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/cenkalti/backoff/v3"
@@ -45,20 +44,11 @@ func retryNotify(err error, d time.Duration) {
 func registerNode(cl *farmer.Client, nodeID string, farmerID uint32, loc geoip.Location) error {
 	log.Info().Msg("registering at farmer bot")
 
-	hostName, err := os.Hostname()
-	if err != nil {
-		hostName = "unknown"
-	}
-
 	return cl.GatewayRegister(farmer.Node{
-		ID:       nodeID,
-		HostName: hostName,
-		FarmID:   farmerID,
-		Secret:   "",
+		ID:     nodeID,
+		FarmID: farmerID,
+		Secret: "",
 		Location: farmer.Location{
-			Continent: loc.Continent,
-			Country:   loc.Country,
-			City:      loc.City,
 			Longitude: loc.Longitute,
 			Latitude:  loc.Latitude,
 		},
